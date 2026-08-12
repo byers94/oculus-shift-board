@@ -101,9 +101,17 @@
         }
 
         function textToBid(site, date, time) {
-            const teamNumbers = "17204354166,17206622968,17206466162,17205176386,17204760104"; 
+            // Base numbers using commas (Apple format)
+            let teamNumbers = "17204354166,17206622968,17206466162,17205176386,17204760104"; 
+            
+            // If the guard is using an Android phone, instantly swap commas for semicolons
+            if (/Android/i.test(navigator.userAgent)) {
+                teamNumbers = teamNumbers.replace(/,/g, ';');
+            }
+            
             const messageText = `Hey team, I would like to bid on the shift at ${site} on ${date} (${time}).`;
             const encodedMessage = encodeURIComponent(messageText);
+            
             window.location.href = `sms:${teamNumbers}?body=${encodedMessage}`;
         }
 
