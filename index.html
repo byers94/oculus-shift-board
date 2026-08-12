@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Oculus Shift Dashboard</title>
+    <style>
+        :root {
+            --primary-bg: #f4f7f6;
+            --card-bg: #ffffff;
+            --text-main: #333333;
+            --text-light: #666666;
+            --oculus-blue: #1e3a8a;
+            --badge-standard: #3b82f6;
+            --badge-firewatch: #ef4444;
+            --badge-calloff: #f97316;
+        }
+        body { font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: var(--primary-bg); margin: 0; padding: 0; color: var(--text-main); }
+        header { background-color: var(--oculus-blue); color: white; padding: 20px; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        header h1 { margin: 0; font-size: 24px; letter-spacing: 1px; }
+        header p { margin: 5px 0 0 0; font-size: 14px; opacity: 0.8; }
+        .container { max-width: 600px; margin: 20px auto; padding: 0 15px; }
+        .shift-card { background-color: var(--card-bg); border-radius: 10px; padding: 20px; margin-bottom: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border-left: 5px solid var(--badge-standard); transition: transform 0.2s; }
+        .shift-card:hover { transform: translateY(-2px); }
+        .shift-card.emergency { border-left-color: var(--badge-firewatch); }
+        .shift-card.calloff { border-left-color: var(--badge-calloff); }
+        .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+        .site-name { font-weight: bold; font-size: 18px; margin: 0; }
+        .badge { padding: 5px 10px; border-radius: 20px; font-size: 12px; font-weight: bold; color: white; text-transform: uppercase; }
+        .badge.standard { background-color: var(--badge-standard); }
+        .badge.emergency { background-color: var(--badge-firewatch); }
+        .badge.calloff { background-color: var(--badge-calloff); }
+        .shift-details { font-size: 15px; line-height: 1.6; }
+        .shift-details strong { color: var(--text-main); }
+        .shift-details span { color: var(--text-light); display: block; margin-bottom: 5px; }
+        .card-actions { margin-top: 15px; text-align: right; }
+        .assign-btn { background-color: #10b981; color: white; border: none; padding: 10px 20px; border-radius: 5px; font-weight: bold; cursor: pointer; }
+        .assign-btn:hover { background-color: #059669; }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>OCULUS SYSTEMS SECURITY</h1>
+        <p>Live Shift Bulletin Dashboard</p>
+    </header>
+    <div class="container" id="feed">
+        <!-- Javascript will inject the shift cards right here -->
+    </div>
+    <script>
+        const openShifts = [
+            { id: "N/A", site: "Pop Denver - Sante Fe Arts District Dedicated", date: "Thu 13 Aug 2026", time: "18:00 - 06:00", hours: "12 Hours", urgency: "Standard" },
+            { id: "N/A", site: "Roving Foxtrot", date: "Fri 14 Aug 2026", time: "18:00 - 06:00", hours: "12 Hours", urgency: "Standard" },
+            { id: "N/A", site: "Cherry Creek ReNew PM", date: "Fri 14 Aug 2026", time: "22:00 - 06:00", hours: "8 Hours", urgency: "Standard" },
+            { id: "N/A", site: "Pool Watch PM (Seasons at Cherry Creek)", date: "Sat 15 Aug 2026", time: "14:00 - 22:00", hours: "8 Hours", urgency: "Standard" },
+            { id: "N/A", site: "Pop Denver - Sante Fe Arts District Dedicated", date: "Sat 15 Aug 2026", time: "18:00 - 06:00", hours: "12 Hours", urgency: "Standard" },
+            { id: "N/A", site: "Cherry Creek ReNew AM (Cherry Creek at ReNew)", date: "Sun 16 Aug 2026", time: "06:00 - 14:00", hours: "8 Hours", urgency: "Standard" },
+            { id: "N/A", site: "The Forge - Pool Watch", date: "Sun 16 Aug 2026", time: "12:00 - 20:00", hours: "8 Hours", urgency: "Standard" },
+            { id: "N/A", site: "Roving Charlie", date: "Sun 16 Aug 2026", time: "18:00 - 06:00", hours: "12 Hours", urgency: "Standard" },
+            { id: "N/A", site: "Roving Delta", date: "Sun 16 Aug 2026", time: "18:00 - 06:00", hours: "12 Hours", urgency: "Standard" }
+        ];
+
+        const feedContainer = document.getElementById('feed');
+
+        function renderShifts() {
+            feedContainer.innerHTML = ''; 
+            
+            if (openShifts.length === 0) {
+                feedContainer.innerHTML = '<p style="text-align:center; color:#666; margin-top:40px;">All shifts are currently filled.</p>';
+                return;
+            }
+
+            openShifts.forEach((shift, index) => {
+                let badgeClass = "standard";
+                let cardClass = "";
+                
+                if (shift.urgency === "Emergency") {
+                    badgeClass = "emergency";
+                    cardClass = "emergency";
+                } else if (shift.urgency === "Call-Off") {
+                    badgeClass = "calloff";
+                    cardClass = "calloff";
+                }
+
+                const cardHTML = `
+                    <div class="shift-card ${cardClass}" id="card-${index}">
+                        <div class="card-header">
+                            <h3 class="site-name">${shift.site}</h3>
+                            <span class="badge ${badgeClass}">${shift.urgency}</span>
+                        </div>
+                        <div class="shift-details">
+                            <span><strong>Date:</strong> ${shift.date}</span>
+                            <span><strong>Time:</strong> ${shift.time} (${shift.hours})</span>
+                        </div>
+                        <div class="card-actions">
+                            <button class="assign-btn" onclick="textToBid('${shift.site}', '${shift.date}', '${shift.time}')">Text to Bid</button>
+                        </div>
+                    </div>
+                `;
+                feedContainer.innerHTML += cardHTML;
+            });
+        }
+
+        function textToBid(site, date, time) {
+            const teamNumbers = "17204354166,17206622968,17206466162,17205176386,17204760104"; 
+            const messageText = `Hey team, I would like to bid on the shift at ${site} on ${date} (${time}).`;
+            const encodedMessage = encodeURIComponent(messageText);
+            window.location.href = `sms:${teamNumbers}?body=${encodedMessage}`;
+        }
+
+        renderShifts();
+    </script>
+</body>
+</html>
