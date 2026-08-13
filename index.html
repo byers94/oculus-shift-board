@@ -65,14 +65,35 @@
         const feedContainer = document.getElementById('feed');
 
         function renderShifts() {
+            function renderShifts() {
             feedContainer.innerHTML = ''; 
             
-            if (openShifts.length === 0) {
+            const now = new Date();
+
+            // Filters out shifts that have already started
+            const activeShifts = openShifts.filter(shift => {
+                try {
+                    // Extract start time (e.g., "18:00" from "18:00 - 06:00")
+                    const startTime = shift.time.split('-')[0].trim();
+                    // Clean date string (e.g., "Thu 13 Aug 2026" -> "13 Aug 2026")
+                    const cleanDate = shift.date.replace(/^[A-Za-z]{3}\s/, '');
+                    
+                    const shiftStart = new Date(`${cleanDate} ${startTime}`);
+                    
+                    // Keep the shift visible only if its start time is in the future
+                    return shiftStart > now;
+                } catch (e) {
+                    // If date parsing fails, keep the shift visible just in case
+                    return true;
+                }
+            });
+
+            if (activeShifts.length === 0) {
                 feedContainer.innerHTML = '<p style="text-align:center; color:#666; margin-top:40px;">All shifts are currently filled.</p>';
                 return;
             }
 
-            openShifts.forEach((shift, index) => {
+            activeShifts.forEach((shift, index) => {
                 let badgeClass = "standard";
                 let cardClass = "";
                 
