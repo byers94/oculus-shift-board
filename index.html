@@ -65,26 +65,33 @@
         const feedContainer = document.getElementById('feed');
 
         function renderShifts() {
-            function renderShifts() {
             feedContainer.innerHTML = ''; 
             
             const now = new Date();
-
-            // Filters out shifts that have already started
+            
+            // Filter out past shifts with a Safari-safe date parser
             const activeShifts = openShifts.filter(shift => {
                 try {
-                    // Extract start time (e.g., "18:00" from "18:00 - 06:00")
-                    const startTime = shift.time.split('-')[0].trim();
-                    // Clean date string (e.g., "Thu 13 Aug 2026" -> "13 Aug 2026")
-                    const cleanDate = shift.date.replace(/^[A-Za-z]{3}\s/, '');
+                    const monthMap = { "Jan":0, "Feb":1, "Mar":2, "Apr":3, "May":4, "Jun":5, "Jul":6, "Aug":7, "Sep":8, "Oct":9, "Nov":10, "Dec":11 };
                     
-                    const shiftStart = new Date(`${cleanDate} ${startTime}`);
+                    // Parse date (e.g., "Thu 13 Aug 2026")
+                    const dateParts = shift.date.split(" ");
+                    const day = parseInt(dateParts[1]);
+                    const month = monthMap[dateParts[2]];
+                    const year = parseInt(dateParts[3]);
                     
-                    // Keep the shift visible only if its start time is in the future
+                    // Parse time (e.g., "18:00 - 06:00")
+                    const timeParts = shift.time.split("-")[0].trim().split(":");
+                    const hours = parseInt(timeParts[0]);
+                    const minutes = parseInt(timeParts[1]);
+                    
+                    // Construct exact start time
+                    const shiftStart = new Date(year, month, day, hours, minutes);
+                    
+                    // Keep if the start time is in the future
                     return shiftStart > now;
                 } catch (e) {
-                    // If date parsing fails, keep the shift visible just in case
-                    return true;
+                    return true; // If parsing fails, show the shift to be safe
                 }
             });
 
@@ -125,27 +132,24 @@
         }
 
         function textToBid(site, date, time) {
-            // Your team's 5 phone numbers
             const numbers = ["17204354166", "17206622968", "17206466162", "17205176386", "17204760104"]; 
             
             const messageText = `Hey team, I would like to bid on the shift at ${site} on ${date} (${time}).`;
             const encodedMessage = encodeURIComponent(messageText);
             
-            // Detect if the guard is using an iPhone or iPad
             const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
             
             let smsLink = "";
             
             if (isIOS) {
-                // Apple's backdoor format for multiple recipients
                 smsLink = `sms://open?addresses=${numbers.join(',')}&body=${encodedMessage}`;
             } else {
-                // Standard Android format using semicolons
                 smsLink = `sms:${numbers.join(';')}?body=${encodedMessage}`;
             }
             
             window.location.href = smsLink;
         }
+        
         renderShifts();
     </script>
 </body>
