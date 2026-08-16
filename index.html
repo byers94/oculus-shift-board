@@ -41,6 +41,9 @@
         .assign-btn:hover { background-color: #059669; }
         .assign-btn:disabled { background-color: #9ca3af; cursor: not-allowed; }
     </style>
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 </head>
 <body>
     <header>
@@ -48,65 +51,42 @@
         <p>Live Shift Bulletin Dashboard</p>
     </header>
     <div class="container" id="feed">
-        <!-- Javascript will inject the shift cards right here -->
+        <p style="text-align:center; color:#666; margin-top:40px;">Loading shifts...</p>
     </div>
-    <script>
-        const openShifts = [
-            { id: "N/A", site: "Mint Urban Infinity - Pool Watch", date: "Sun 16 Aug 2026", time: "14:00 - 22:00", hours: "8 Hours", urgency: "Call-Off" },
-            { id: "N/A", site: "Mint Urban Infinity - Pool Watch", date: "Mon 17 Aug 2026", time: "14:00 - 22:00", hours: "8 Hours", urgency: "Standard" },
-            { id: "N/A", site: "Mint Urban Infinity - Pool Watch", date: "Tue 18 Aug 2026", time: "14:00 - 22:00", hours: "8 Hours", urgency: "Standard" },
-            { id: "N/A", site: "Mint Urban Infinity - Pool Watch", date: "Wed 19 Aug 2026", time: "14:00 - 22:00", hours: "8 Hours", urgency: "Standard" },
-            { id: "N/A", site: "Mint Urban Infinity - Pool Watch", date: "Thu 20 Aug 2026", time: "14:00 - 22:00", hours: "8 Hours", urgency: "Standard" },
-            { id: "N/A", site: "Meridian PM (Meridian at Cherry Creek Apartments)", date: "Thu 20 Aug 2026", time: "22:00 - 06:00", hours: "8 Hours", urgency: "Standard" },
-            { id: "N/A", site: "Mint Urban Infinity - Pool Watch", date: "Fri 21 Aug 2026", time: "14:00 - 22:00", hours: "8 Hours", urgency: "Standard" },
-            { id: "N/A", site: "Meridian PM (Meridian at Cherry Creek Apartments)", date: "Fri 21 Aug 2026", time: "22:00 - 06:00", hours: "8 Hours", urgency: "Standard" },
-            { id: "N/A", site: "Seasons at Cherry Creek - Pool Watch Saturday", date: "Sat 22 Aug 2026", time: "10:00 - 14:00", hours: "4 Hours", urgency: "Standard" },
-            { id: "N/A", site: "July/August Pool Watch (Novel Rino Dedicated)", date: "Sat 22 Aug 2026", time: "11:00 - 19:00", hours: "8 Hours", urgency: "Standard" },
-            { id: "N/A", site: "Roving Foxtrot", date: "Sat 22 Aug 2026", time: "18:00 - 06:00", hours: "12 Hours", urgency: "Standard" },
-            { id: "N/A", site: "Alton Jefferson Garage Watch", date: "Sat 22 Aug 2026", time: "18:00 - 06:00", hours: "12 Hours", urgency: "Standard" },
-            { id: "N/A", site: "Pop Denver - Sante Fe Arts District Dedicated", date: "Sat 22 Aug 2026", time: "18:00 - 06:00", hours: "12 Hours", urgency: "Standard" },
-            { id: "N/A", site: "Cherry Creek ReNew PM", date: "Sat 22 Aug 2026", time: "22:00 - 06:00", hours: "8 Hours", urgency: "Standard" },
-            { id: "N/A", site: "Cherry Creek ReNew AM", date: "Sun 23 Aug 2026", time: "06:00 - 14:00", hours: "8 Hours", urgency: "Standard" },
-            { id: "N/A", site: "Alton Jefferson Garage Watch", date: "Sun 23 Aug 2026", time: "18:00 - 06:00", hours: "12 Hours", urgency: "Standard" },
-            { id: "N/A", site: "Roving Charlie", date: "Sun 23 Aug 2026", time: "18:00 - 06:00", hours: "12 Hours", urgency: "Standard" },
-            { id: "N/A", site: "Roving Delta", date: "Sun 23 Aug 2026", time: "18:00 - 06:00", hours: "12 Hours", urgency: "Standard" }
-        ];
 
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyD-SxQG5H-gD5UbwbG-PEzu6buAuOFbKSw",
+            authDomain: "oculus-opne-shift-board.firebaseapp.com",
+            projectId: "oculus-opne-shift-board",
+            storageBucket: "oculus-opne-shift-board.firebasestorage.app",
+            messagingSenderId: "282551856349",
+            appId: "1:282551856349:web:981dcb99fa0a3762353f34",
+            measurementId: "G-109T25DMNY"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
         const feedContainer = document.getElementById('feed');
 
-        function renderShifts() {
-            feedContainer.innerHTML = ''; 
-            
+        // Real-time listener for shifts
+        db.collection("shifts").orderBy("startIso", "asc").onSnapshot((snapshot) => {
+            feedContainer.innerHTML = '';
             const now = new Date();
-            
-            // Filter out past shifts with a Safari-safe date parser
-            const activeShifts = openShifts.filter(shift => {
-                try {
-                    const monthMap = { "Jan":0, "Feb":1, "Mar":2, "Apr":3, "May":4, "Jun":5, "Jul":6, "Aug":7, "Sep":8, "Oct":9, "Nov":10, "Dec":11 };
-                    const dateParts = shift.date.split(" ");
-                    const day = parseInt(dateParts[1]);
-                    const month = monthMap[dateParts[2]];
-                    const year = parseInt(dateParts[3]);
-                    const timeParts = shift.time.split("-")[0].trim().split(":");
-                    const hours = parseInt(timeParts[0]);
-                    const minutes = parseInt(timeParts[1]);
-                    const shiftStart = new Date(year, month, day, hours, minutes);
-                    return shiftStart > now;
-                } catch (e) {
-                    return true;
-                }
-            });
+            let count = 0;
 
-            if (activeShifts.length === 0) {
-                feedContainer.innerHTML = '<p style="text-align:center; color:#666; margin-top:40px;">All shifts are currently filled.</p>';
-                return;
-            }
+            snapshot.forEach((doc) => {
+                const shift = doc.data();
+                const shiftStart = new Date(shift.startIso);
 
-            activeShifts.forEach((shift, index) => {
+                // Auto drop-off: hide if start time has already passed
+                if (shiftStart <= now) return;
+
+                count++;
                 let badgeClass = "standard";
                 let cardClass = "";
-                let buttonHTML = `<button class="assign-btn" onclick="textToBid('${shift.site}', '${shift.date}', '${shift.time}')">Text to Bid</button>`;
-                
+                let buttonHTML = `<button class="assign-btn" onclick="textToBid('${shift.site}', '${shift.dateDisplay}', '${shift.timeDisplay}')">Text to Bid</button>`;
+
                 if (shift.urgency === "Emergency") {
                     badgeClass = "emergency";
                     cardClass = "emergency";
@@ -120,14 +100,14 @@
                 }
 
                 const cardHTML = `
-                    <div class="shift-card ${cardClass}" id="card-${index}">
+                    <div class="shift-card ${cardClass}">
                         <div class="card-header">
                             <h3 class="site-name">${shift.site}</h3>
                             <span class="badge ${badgeClass}">${shift.urgency === "Filled" ? "FILLED" : shift.urgency}</span>
                         </div>
                         <div class="shift-details">
-                            <span><strong>Date:</strong> ${shift.date}</span>
-                            <span><strong>Time:</strong> ${shift.time} (${shift.hours})</span>
+                            <span><strong>Date:</strong> ${shift.dateDisplay}</span>
+                            <span><strong>Time:</strong> ${shift.timeDisplay} (${shift.hours})</span>
                         </div>
                         <div class="card-actions">
                             ${buttonHTML}
@@ -136,18 +116,22 @@
                 `;
                 feedContainer.innerHTML += cardHTML;
             });
-        }
+
+            if (count === 0) {
+                feedContainer.innerHTML = '<p style="text-align:center; color:#666; margin-top:40px;">All shifts are currently filled.</p>';
+            }
+        });
 
         function textToBid(site, date, time) {
-            const numbers = ["17204354166", "17206622968", "17206466162", "17205176386", "17204760104"]; 
+            const numbers = ["17204354166", "17206622968", "17206466162", "17205176386", "17204760104"];
             const messageText = `Hey team, I would like to bid on the shift at ${site} on ${date} (${time}).`;
             const encodedMessage = encodeURIComponent(messageText);
             const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
-            let smsLink = isIOS ? `sms://open?addresses=${numbers.join(',')}&body=${encodedMessage}` : `sms:${numbers.join(';')}?body=${encodedMessage}`;
+            const smsLink = isIOS 
+                ? `sms://open?addresses=${numbers.join(',')}&body=${encodedMessage}` 
+                : `sms:${numbers.join(';')}?body=${encodedMessage}`;
             window.location.href = smsLink;
         }
-        
-        renderShifts();
     </script>
 </body>
 </html>
