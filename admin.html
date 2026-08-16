@@ -21,11 +21,14 @@
         h2 { margin-top: 0; font-size: 18px; color: var(--primary); border-bottom: 2px solid #e5e7eb; padding-bottom: 8px; }
         .form-group { margin-bottom: 12px; }
         label { display: block; font-size: 13px; font-weight: bold; margin-bottom: 4px; color: #4b5563; }
-        input, select { width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; box-sizing: border-box; font-size: 15px; }
+        input, select, textarea { width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; box-sizing: border-box; font-size: 15px; }
+        textarea { font-family: monospace; font-size: 13px; resize: vertical; }
         .row { display: flex; gap: 10px; }
         .row .form-group { flex: 1; }
         button.submit-btn { width: 100%; background: var(--success); color: white; padding: 12px; border: none; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 5px; }
         button.submit-btn:hover { background: #059669; }
+        button.bulk-btn { background: var(--primary); }
+        button.bulk-btn:hover { background: #172554; }
         .shift-item { border: 1px solid #e5e7eb; border-left: 4px solid var(--primary); border-radius: 6px; padding: 12px; margin-bottom: 10px; background: #fafafa; }
         .shift-item.filled { border-left-color: var(--gray); opacity: 0.7; }
         .shift-item.calloff { border-left-color: var(--warning); }
@@ -57,8 +60,18 @@
     <header>Oculus Shift Board Admin</header>
 
     <div class="container" id="admin-panel" style="display:none;">
+        
+        <!-- Bulk Add Section -->
         <div class="card">
-            <h2>Add Open Shift</h2>
+            <h2>Mass / Bulk Import Shifts</h2>
+            <p style="font-size: 13px; color: #666; margin-top: -4px;">Paste the formatted shift data block to add multiple shifts simultaneously.</p>
+            <textarea id="bulk-input" rows="5" placeholder='[&#10;  { "site": "Alton Jefferson Garage Watch", "date": "Mon 17 Aug 2026", "time": "18:00 - 06:00", "hours": "12 Hours", "urgency": "Standard" }&#10;]'></textarea>
+            <button type="button" class="submit-btn bulk-btn" onclick="bulkAddShifts()">⚡ Bulk Upload Shifts</button>
+        </div>
+
+        <!-- Single Shift Add Form -->
+        <div class="card">
+            <h2>Add Single Shift</h2>
             <form id="add-shift-form" onsubmit="addShift(event)">
                 <div class="form-group">
                     <label>Site Name</label>
@@ -86,10 +99,11 @@
                         <option value="Emergency">Emergency / Firewatch</option>
                     </select>
                 </div>
-                <button type="submit" class="submit-btn">+ Post to Live Board</button>
+                <button type="submit" class="submit-btn">+ Post Single Shift</button>
             </form>
         </div>
 
+        <!-- Active Shift List -->
         <div class="card">
             <h2>Active Shift Feed</h2>
             <div id="shift-list">Loading shifts...</div>
@@ -97,7 +111,7 @@
     </div>
 
     <script>
-        const ADMIN_PIN = "1024"; // Change this PIN to whatever code you and your team prefer
+        const ADMIN_PIN = "1024";
 
         function checkPin() {
             const entered = document.getElementById('pin-input').value;
@@ -123,6 +137,46 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
+        async function bulkAddShifts() {
+            const raw = document.getElementById('bulk-input').value.trim();
+            if (!raw) {
+                alert("Please paste the shift JSON data first.");
+                return;
+            }
+
+            try {
+                const shifts = JSON.parse(raw);
+                const batch = db.batch();
+                const monthMap = { "Jan":"01", "Feb":"02", "Mar":"03", "Apr":"04", "May":"05", "Jun":"06", "Jul":"07", "Aug":"08", "Sep":"09", "Oct":"10", "Nov":"11", "Dec":"12" };
+
+                shifts.forEach(s => {
+                    const dateParts = s.date.split(" ");
+                    const day = dateParts[1].padStart(2, '0');
+                    const month = monthMap[dateParts[2]];
+                    const year = dateParts[3];
+                    const startTime = s.time.split("-")[0].trim();
+                    const startIso = `${year}-${month}-${day}T${startTime}:00`;
+
+                    const ref = db.collection("shifts").doc();
+                    batch.set(ref, {
+                        site: s.site,
+                        dateDisplay: s.date,
+                        timeDisplay: s.time,
+                        hours: s.hours,
+                        urgency: s.urgency || "Standard",
+                        startIso: startIso,
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                });
+
+                await batch.commit();
+                alert(`Successfully uploaded ${shifts.length} shifts!`);
+                document.getElementById('bulk-input').value = '';
+            } catch (err) {
+                alert("Invalid shift data format. Error: " + err.message);
+            }
+        }
+
         async function addShift(e) {
             e.preventDefault();
             const site = document.getElementById('site').value.trim();
@@ -131,14 +185,12 @@
             const endTime = document.getElementById('end-time').value;
             const urgency = document.getElementById('urgency').value;
 
-            // Date formatting
             const dateParts = dateVal.split('-');
             const dateObj = new Date(dateParts[0], dateParts[1] - 1, dateParts[2]);
             const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
             const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
             const dateDisplay = `${days[dateObj.getDay()]} ${dateObj.getDate()} ${months[dateObj.getMonth()]} ${dateObj.getFullYear()}`;
 
-            // Duration calculation
             const [sH, sM] = startTime.split(':').map(Number);
             const [eH, eM] = endTime.split(':').map(Number);
             let diffHours = (eH + eM/60) - (sH + sM/60);
