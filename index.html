@@ -14,6 +14,7 @@
             --badge-standard: #3b82f6;
             --badge-firewatch: #ef4444;
             --badge-calloff: #f97316;
+            --badge-filled: #6b7280;
         }
         body { font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: var(--primary-bg); margin: 0; padding: 0; color: var(--text-main); }
         header { background-color: var(--oculus-blue); color: white; padding: 20px; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
@@ -24,18 +25,21 @@
         .shift-card:hover { transform: translateY(-2px); }
         .shift-card.emergency { border-left-color: var(--badge-firewatch); }
         .shift-card.calloff { border-left-color: var(--badge-calloff); }
+        .shift-card.filled { border-left-color: var(--badge-filled); opacity: 0.6; }
         .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
         .site-name { font-weight: bold; font-size: 18px; margin: 0; }
         .badge { padding: 5px 10px; border-radius: 20px; font-size: 12px; font-weight: bold; color: white; text-transform: uppercase; }
         .badge.standard { background-color: var(--badge-standard); }
         .badge.emergency { background-color: var(--badge-firewatch); }
         .badge.calloff { background-color: var(--badge-calloff); }
+        .badge.filled { background-color: var(--badge-filled); }
         .shift-details { font-size: 15px; line-height: 1.6; }
         .shift-details strong { color: var(--text-main); }
         .shift-details span { color: var(--text-light); display: block; margin-bottom: 5px; }
         .card-actions { margin-top: 15px; text-align: right; }
         .assign-btn { background-color: #10b981; color: white; border: none; padding: 10px 20px; border-radius: 5px; font-weight: bold; cursor: pointer; }
         .assign-btn:hover { background-color: #059669; }
+        .assign-btn:disabled { background-color: #9ca3af; cursor: not-allowed; }
     </style>
 </head>
 <body>
@@ -48,25 +52,23 @@
     </div>
     <script>
         const openShifts = [
-            { id: "N/A", site: "Cherry Creek ReNew PM", date: "Fri 14 Aug 2026", time: "22:00 - 06:00", hours: "8 Hours", urgency: "Standard" },
-            { id: "N/A", site: "Pool Watch PM (Seasons at Cherry Creek)", date: "Sat 15 Aug 2026", time: "14:00 - 22:00", hours: "8 Hours", urgency: "Standard" },
-            { id: "N/A", site: "Cherry Creek ReNew AM (Cherry Creek at ReNew)", date: "Sun 16 Aug 2026", time: "06:00 - 14:00", hours: "8 Hours", urgency: "Standard" },
-            { id: "N/A", site: "Roving Charlie", date: "Sun 16 Aug 2026", time: "18:00 - 06:00", hours: "12 Hours", urgency: "Standard" },
-            { id: "N/A", site: "Roving Delta", date: "Sun 16 Aug 2026", time: "18:00 - 06:00", hours: "12 Hours", urgency: "Standard" },
-            { id: "N/A", site: "Alton Jefferson Garage Watch", date: "Thu 13 Aug 2026", time: "18:00 - 06:00", hours: "12 Hours", urgency: "Emergency" },
-            { id: "N/A", site: "Alton Jefferson Garage Watch", date: "Sat 15 Aug 2026", time: "18:00 - 06:00", hours: "12 Hours", urgency: "Standard" },
-            { id: "N/A", site: "Alton Jefferson Garage Watch", date: "Sun 16 Aug 2026", time: "18:00 - 06:00", hours: "12 Hours", urgency: "Standard" },
-            { id: "N/A", site: "Alton Jefferson Garage Watch", date: "Mon 17 Aug 2026", time: "18:00 - 06:00", hours: "12 Hours", urgency: "Standard" },
-            { id: "N/A", site: "Alton Jefferson Garage Watch", date: "Tue 18 Aug 2026", time: "18:00 - 06:00", hours: "12 Hours", urgency: "Standard" },
-            { id: "N/A", site: "Alton Jefferson Garage Watch", date: "Wed 19 Aug 2026", time: "18:00 - 06:00", hours: "12 Hours", urgency: "Standard" },
-            { id: "N/A", site: "Alton Jefferson Garage Watch", date: "Thu 20 Aug 2026", time: "18:00 - 06:00", hours: "12 Hours", urgency: "Standard" },
-            { id: "N/A", site: "Alton Jefferson Garage Watch", date: "Thu 20 Aug 2026", time: "18:00 - 06:00", hours: "12 Hours", urgency: "Standard" },
-            { id: "N/A", site: "Pop Denver - Sante Fe Arts District Dedicated", date: "Thu 20 Aug 2026", time: "18:00 - 06:00", hours: "12 Hours", urgency: "Standard" },
+            { id: "N/A", site: "Mint Urban Infinity - Pool Watch", date: "Mon 17 Aug 2026", time: "14:00 - 22:00", hours: "8 Hours", urgency: "Standard" },
+            { id: "N/A", site: "Mint Urban Infinity - Pool Watch", date: "Tue 18 Aug 2026", time: "14:00 - 22:00", hours: "8 Hours", urgency: "Standard" },
+            { id: "N/A", site: "Mint Urban Infinity - Pool Watch", date: "Wed 19 Aug 2026", time: "14:00 - 22:00", hours: "8 Hours", urgency: "Standard" },
+            { id: "N/A", site: "Mint Urban Infinity - Pool Watch", date: "Thu 20 Aug 2026", time: "14:00 - 22:00", hours: "8 Hours", urgency: "Standard" },
             { id: "N/A", site: "Meridian PM (Meridian at Cherry Creek Apartments)", date: "Thu 20 Aug 2026", time: "22:00 - 06:00", hours: "8 Hours", urgency: "Standard" },
-            { id: "N/A", site: "Pop Denver - Sante Fe Arts District Dedicated", date: "Fri 21 Aug 2026", time: "18:00 - 06:00", hours: "12 Hours", urgency: "Standard" },
-            { id: "N/A", site: "Roving Foxtrot", date: "Fri 21 Aug 2026", time: "18:00 - 06:00", hours: "12 Hours", urgency: "Standard" },
+            { id: "N/A", site: "Mint Urban Infinity - Pool Watch", date: "Fri 21 Aug 2026", time: "14:00 - 22:00", hours: "8 Hours", urgency: "Standard" },
             { id: "N/A", site: "Meridian PM (Meridian at Cherry Creek Apartments)", date: "Fri 21 Aug 2026", time: "22:00 - 06:00", hours: "8 Hours", urgency: "Standard" },
-            { id: "N/A", site: "Alton Jefferson Garage Watch", date: "Fri 21 Aug 2026", time: "18:00 - 06:00", hours: "12 Hours", urgency: "Standard" }
+            { id: "N/A", site: "Seasons at Cherry Creek - Pool Watch Saturday", date: "Sat 22 Aug 2026", time: "10:00 - 14:00", hours: "4 Hours", urgency: "Standard" },
+            { id: "N/A", site: "July/August Pool Watch (Novel Rino Dedicated)", date: "Sat 22 Aug 2026", time: "11:00 - 19:00", hours: "8 Hours", urgency: "Standard" },
+            { id: "N/A", site: "Roving Foxtrot", date: "Sat 22 Aug 2026", time: "18:00 - 06:00", hours: "12 Hours", urgency: "Standard" },
+            { id: "N/A", site: "Alton Jefferson Garage Watch", date: "Sat 22 Aug 2026", time: "18:00 - 06:00", hours: "12 Hours", urgency: "Standard" },
+            { id: "N/A", site: "Pop Denver - Sante Fe Arts District Dedicated", date: "Sat 22 Aug 2026", time: "18:00 - 06:00", hours: "12 Hours", urgency: "Standard" },
+            { id: "N/A", site: "Cherry Creek ReNew PM", date: "Sat 22 Aug 2026", time: "22:00 - 06:00", hours: "8 Hours", urgency: "Standard" },
+            { id: "N/A", site: "Cherry Creek ReNew AM", date: "Sun 23 Aug 2026", time: "06:00 - 14:00", hours: "8 Hours", urgency: "Standard" },
+            { id: "N/A", site: "Alton Jefferson Garage Watch", date: "Sun 23 Aug 2026", time: "18:00 - 06:00", hours: "12 Hours", urgency: "Standard" },
+            { id: "N/A", site: "Roving Charlie", date: "Sun 23 Aug 2026", time: "18:00 - 06:00", hours: "12 Hours", urgency: "Standard" },
+            { id: "N/A", site: "Roving Delta", date: "Sun 23 Aug 2026", time: "18:00 - 06:00", hours: "12 Hours", urgency: "Standard" }
         ];
 
         const feedContainer = document.getElementById('feed');
@@ -80,25 +82,17 @@
             const activeShifts = openShifts.filter(shift => {
                 try {
                     const monthMap = { "Jan":0, "Feb":1, "Mar":2, "Apr":3, "May":4, "Jun":5, "Jul":6, "Aug":7, "Sep":8, "Oct":9, "Nov":10, "Dec":11 };
-                    
-                    // Parse date (e.g., "Thu 13 Aug 2026")
                     const dateParts = shift.date.split(" ");
                     const day = parseInt(dateParts[1]);
                     const month = monthMap[dateParts[2]];
                     const year = parseInt(dateParts[3]);
-                    
-                    // Parse time (e.g., "18:00 - 06:00")
                     const timeParts = shift.time.split("-")[0].trim().split(":");
                     const hours = parseInt(timeParts[0]);
                     const minutes = parseInt(timeParts[1]);
-                    
-                    // Construct exact start time
                     const shiftStart = new Date(year, month, day, hours, minutes);
-                    
-                    // Keep if the start time is in the future
                     return shiftStart > now;
                 } catch (e) {
-                    return true; // If parsing fails, show the shift to be safe
+                    return true;
                 }
             });
 
@@ -110,6 +104,7 @@
             activeShifts.forEach((shift, index) => {
                 let badgeClass = "standard";
                 let cardClass = "";
+                let buttonHTML = `<button class="assign-btn" onclick="textToBid('${shift.site}', '${shift.date}', '${shift.time}')">Text to Bid</button>`;
                 
                 if (shift.urgency === "Emergency") {
                     badgeClass = "emergency";
@@ -117,20 +112,24 @@
                 } else if (shift.urgency === "Call-Off") {
                     badgeClass = "calloff";
                     cardClass = "calloff";
+                } else if (shift.urgency === "Filled") {
+                    badgeClass = "filled";
+                    cardClass = "filled";
+                    buttonHTML = `<button class="assign-btn" disabled>Shift Assigned</button>`;
                 }
 
                 const cardHTML = `
                     <div class="shift-card ${cardClass}" id="card-${index}">
                         <div class="card-header">
                             <h3 class="site-name">${shift.site}</h3>
-                            <span class="badge ${badgeClass}">${shift.urgency}</span>
+                            <span class="badge ${badgeClass}">${shift.urgency === "Filled" ? "FILLED" : shift.urgency}</span>
                         </div>
                         <div class="shift-details">
                             <span><strong>Date:</strong> ${shift.date}</span>
                             <span><strong>Time:</strong> ${shift.time} (${shift.hours})</span>
                         </div>
                         <div class="card-actions">
-                            <button class="assign-btn" onclick="textToBid('${shift.site}', '${shift.date}', '${shift.time}')">Text to Bid</button>
+                            ${buttonHTML}
                         </div>
                     </div>
                 `;
@@ -140,20 +139,10 @@
 
         function textToBid(site, date, time) {
             const numbers = ["17204354166", "17206622968", "17206466162", "17205176386", "17204760104"]; 
-            
             const messageText = `Hey team, I would like to bid on the shift at ${site} on ${date} (${time}).`;
             const encodedMessage = encodeURIComponent(messageText);
-            
             const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
-            
-            let smsLink = "";
-            
-            if (isIOS) {
-                smsLink = `sms://open?addresses=${numbers.join(',')}&body=${encodedMessage}`;
-            } else {
-                smsLink = `sms:${numbers.join(';')}?body=${encodedMessage}`;
-            }
-            
+            let smsLink = isIOS ? `sms://open?addresses=${numbers.join(',')}&body=${encodedMessage}` : `sms:${numbers.join(';')}?body=${encodedMessage}`;
             window.location.href = smsLink;
         }
         
