@@ -11,7 +11,408 @@
             --text-main: #333333;
             --oculus-blue: #1e3a8a;
             --success: #10b981;
+            --warning: #f59e0b;<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Oculus Shift Trade Board</title>
+    <style>
+        :root {
+            --primary-bg: #f4f7f6;
+            --card-bg: #ffffff;
+            --text-main: #333333;
+            --oculus-blue: #1e3a8a;
+            --success: #10b981;
             --warning: #f59e0b;
+            --gray: #6b7280;
+            --ticker-bg: #0f172a;
+            --ticker-text: #38bdf8;
+        }
+        body { font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: var(--primary-bg); margin: 0; padding: 0; color: var(--text-main); }
+        header { background-color: var(--oculus-blue); color: white; padding: 20px 20px 14px 20px; text-align: center; }
+        header h1 { margin: 0; font-size: 22px; letter-spacing: 0.5px; }
+        header p { margin: 4px 0 0 0; font-size: 14px; opacity: 0.9; }
+
+        /* Stock Ticker Bar */
+        .ticker-wrap {
+            width: 100%;
+            overflow: hidden;
+            background-color: var(--ticker-bg);
+            padding: 8px 0;
+            box-sizing: border-box;
+            border-bottom: 2px solid #2563eb;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+        }
+        .ticker-move {
+            display: inline-block;
+            white-space: nowrap;
+            padding-left: 100%;
+            animation: ticker 32s linear infinite;
+            color: #ffffff;
+            font-size: 13px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+        .ticker-move:hover, .ticker-move:active {
+            animation-play-state: paused;
+        }
+        .ticker-highlight {
+            color: var(--ticker-text);
+            font-weight: bold;
+        }
+        @keyframes ticker {
+            0% { transform: translate3d(0, 0, 0); }
+            100% { transform: translate3d(-100%, 0, 0); }
+        }
+        
+        .container { max-width: 600px; margin: 20px auto; padding: 0 15px; }
+        .action-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .btn-post { background-color: var(--oculus-blue); color: white; border: none; padding: 12px 20px; border-radius: 6px; font-weight: bold; font-size: 15px; cursor: pointer; width: 100%; }
+        .btn-post:hover { background-color: #172554; }
+        
+        .trade-card { background: var(--card-bg); border-radius: 8px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); border-left: 5px solid var(--warning); }
+        .trade-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 10px; }
+        .trade-header h3 { margin: 0; font-size: 16px; color: var(--oculus-blue); }
+        .badge { background: var(--warning); color: white; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; text-transform: uppercase; }
+        
+        .trade-details { font-size: 14px; line-height: 1.5; }
+        .trade-details .label { color: var(--gray); font-weight: bold; font-size: 12px; text-transform: uppercase; margin-top: 8px; display: block; }
+        .trade-details .data { font-weight: 500; }
+        
+        .btn-offer { background-color: var(--success); color: white; border: none; padding: 10px; border-radius: 5px; font-weight: bold; cursor: pointer; width: 100%; margin-top: 15px; }
+        
+        /* Modal Styles */
+        .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); align-items: center; justify-content: center; z-index: 100; padding: 15px; }
+        .modal-content { background: white; border-radius: 8px; padding: 20px; width: 100%; max-width: 400px; max-height: 90vh; overflow-y: auto; }
+        .modal-content h2 { margin-top: 0; font-size: 18px; color: var(--oculus-blue); border-bottom: 2px solid #eee; padding-bottom: 10px; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; font-size: 13px; font-weight: bold; color: #555; margin-bottom: 5px; }
+        .form-group input, .form-group select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; font-size: 14px; }
+        .modal-actions { display: flex; gap: 10px; margin-top: 20px; }
+        .btn-cancel { background: #f1f5f9; color: #333; border: 1px solid #ccc; padding: 10px; border-radius: 5px; flex: 1; cursor: pointer; font-weight: bold; }
+        .btn-submit { background: var(--success); color: white; border: none; padding: 10px; border-radius: 5px; flex: 2; cursor: pointer; font-weight: bold; }
+    </style>
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+</head>
+<body>
+
+    <header>
+        <h1>OCULUS SYSTEMS SECURITY</h1>
+        <p>Guard Shift Trade & Swap Board</p>
+    </header>
+
+    <!-- Animated Ticker Bar -->
+    <div class="ticker-wrap">
+        <div class="ticker-move" id="ticker-content">
+            🔄 TRADE FEED ACTIVE &bull; Syncing trade requests...
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="action-bar">
+            <button class="btn-post" onclick="openPostModal()">+ Post a Shift for Trade</button>
+        </div>
+        
+        <div id="trade-feed">
+            <p style="text-align:center; color:#666; margin-top:40px;">Loading trade board...</p>
+        </div>
+    </div>
+
+    <!-- MODAL 1: Post a Trade -->
+    <div class="modal-overlay" id="post-modal">
+        <div class="modal-content">
+            <h2>Post Shift to Trade Board</h2>
+            <p style="font-size:12px; color:#666; margin-top:-10px;">Select the shift you want to give up, and the dates you are willing to work instead.</p>
+            
+            <form id="post-trade-form" onsubmit="submitTradePost(event)">
+                <div class="form-group">
+                    <label>Your Name (Last, First)</label>
+                    <input type="text" id="post-name" required placeholder="e.g. Byers, Raleigh">
+                </div>
+                
+                <div style="background:#f8fafc; padding:10px; border-radius:6px; margin-bottom:15px; border: 1px solid #e2e8f0;">
+                    <label style="color:var(--oculus-blue); font-size:14px; margin-bottom:10px; display:block; font-weight:bold;">SHIFT YOU ARE GIVING UP:</label>
+                    <div class="form-group">
+                        <label>Site Name</label>
+                        <select id="post-site" required>
+                            <option value="" disabled selected>Select Site...</option>
+                            <option value="Mint Urban Infinity">Mint Urban Infinity</option>
+                            <option value="Alton Jefferson Garage">Alton Jefferson Garage</option>
+                            <option value="Cherry Creek ReNew">Cherry Creek ReNew</option>
+                            <option value="The Forge Security">The Forge Security</option>
+                            <option value="Other / Dispatch Assigned">Other / Dispatch Assigned</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Shift Date</label>
+                        <input type="date" id="post-date" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Shift Time</label>
+                        <select id="post-time" required>
+                            <option value="" disabled selected>Select Time...</option>
+                            <option value="06:00 - 14:00 (8 Hrs)">06:00 - 14:00 (8 Hrs)</option>
+                            <option value="14:00 - 22:00 (8 Hrs)">14:00 - 22:00 (8 Hrs)</option>
+                            <option value="22:00 - 06:00 (8 Hrs)">22:00 - 06:00 (8 Hrs)</option>
+                            <option value="21:00 - 05:00 (8 Hrs)">21:00 - 05:00 (8 Hrs)</option>
+                            <option value="18:00 - 06:00 (12 Hrs)">18:00 - 06:00 (12 Hrs)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Dates You Can Work Instead (Availability Window)</label>
+                    <select id="post-availability" required>
+                        <option value="" disabled selected>Select Availability...</option>
+                        <option value="Any day same week">Any day same week</option>
+                        <option value="Specific Date Only (Will finalize with Ops)">Specific Date Only (Will finalize with Ops)</option>
+                        <option value="Just need off (No Swap)">Just need off (No Swap Available)</option>
+                    </select>
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" class="btn-cancel" onclick="closeModals()">Cancel</button>
+                    <button type="submit" class="btn-submit">Submit to Board</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL 2: Offer a Swap -->
+    <div class="modal-overlay" id="offer-modal">
+        <div class="modal-content">
+            <h2>Propose Shift Swap</h2>
+            <p style="font-size:12px; color:#666; margin-top:-10px;">Select the shift YOU are willing to give up in exchange for this one.</p>
+            
+            <form id="offer-swap-form" onsubmit="submitOffer(event)">
+                <input type="hidden" id="target-trade-id">
+                <div class="form-group">
+                    <label>Your Name (Last, First)</label>
+                    <input type="text" id="offer-name" required placeholder="e.g. Davis, Robert">
+                </div>
+                
+                <div style="background:#f0fdf4; padding:10px; border-radius:6px; margin-bottom:15px; border: 1px solid #bbf7d0;">
+                    <label style="color:var(--success); font-size:14px; margin-bottom:10px; display:block; font-weight:bold;">SHIFT YOU ARE OFFERING:</label>
+                    <div class="form-group">
+                        <label>Site Name</label>
+                        <select id="offer-site" required>
+                            <option value="" disabled selected>Select Site...</option>
+                            <option value="Mint Urban Infinity">Mint Urban Infinity</option>
+                            <option value="Alton Jefferson Garage">Alton Jefferson Garage</option>
+                            <option value="Cherry Creek ReNew">Cherry Creek ReNew</option>
+                            <option value="The Forge Security">The Forge Security</option>
+                            <option value="Other / Dispatch Assigned">Other / Dispatch Assigned</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Shift Date</label>
+                        <input type="date" id="offer-date" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Shift Time</label>
+                        <select id="offer-time" required>
+                            <option value="" disabled selected>Select Time...</option>
+                            <option value="06:00 - 14:00 (8 Hrs)">06:00 - 14:00 (8 Hrs)</option>
+                            <option value="14:00 - 22:00 (8 Hrs)">14:00 - 22:00 (8 Hrs)</option>
+                            <option value="22:00 - 06:00 (8 Hrs)">22:00 - 06:00 (8 Hrs)</option>
+                            <option value="21:00 - 05:00 (8 Hrs)">21:00 - 05:00 (8 Hrs)</option>
+                            <option value="18:00 - 06:00 (12 Hrs)">18:00 - 06:00 (12 Hrs)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Have you worked Guard A's site before?</label>
+                    <select id="offer-training" required>
+                        <option value="" disabled selected>Select status...</option>
+                        <option value="Trained">Yes, I have worked there before</option>
+                        <option value="Needs OJT">No, I have never worked there</option>
+                    </select>
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" class="btn-cancel" onclick="closeModals()">Cancel</button>
+                    <button type="submit" class="btn-submit">Submit Proposal to Ops</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL 3: Claim a Giveaway (No Swap) -->
+    <div class="modal-overlay" id="claim-modal">
+        <div class="modal-content">
+            <h2>Claim Shift</h2>
+            <p style="font-size:12px; color:#666; margin-top:-10px;">Enter your name to request this shift. Ops will review and assign it if approved.</p>
+            
+            <form id="claim-shift-form" onsubmit="submitClaim(event)">
+                <input type="hidden" id="claim-trade-id">
+                <div class="form-group">
+                    <label>Your Name (Last, First)</label>
+                    <input type="text" id="claim-name" required placeholder="e.g. Davis, Robert">
+                </div>
+
+                <div class="form-group">
+                    <label>Have you worked this site before?</label>
+                    <select id="claim-training" required>
+                        <option value="" disabled selected>Select status...</option>
+                        <option value="Trained">Yes, I have worked there before</option>
+                        <option value="Needs OJT">No, I have never worked there</option>
+                    </select>
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" class="btn-cancel" onclick="closeModals()">Cancel</button>
+                    <button type="submit" class="btn-submit" style="background-color: var(--oculus-blue);">Claim Shift</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyD-SxQG5H-gD5UbwbG-PEzu6buAuOFbKSw",
+            authDomain: "oculus-opne-shift-board.firebaseapp.com",
+            projectId: "oculus-opne-shift-board",
+            storageBucket: "oculus-opne-shift-board.firebasestorage.app",
+            messagingSenderId: "282551856349",
+            appId: "1:282551856349:web:981dcb99fa0a3762353f34"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const tickerElement = document.getElementById('ticker-content');
+
+        function formatDateStr(dateStr) {
+            const parts = dateStr.split('-');
+            if(parts.length !== 3) return dateStr;
+            const d = new Date(parts[0], parts[1]-1, parts[2]);
+            return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+        }
+
+        function openPostModal() { document.getElementById('post-modal').style.display = 'flex'; }
+        function closeModals() {
+            document.getElementById('post-modal').style.display = 'none';
+            document.getElementById('offer-modal').style.display = 'none';
+            document.getElementById('claim-modal').style.display = 'none';
+            document.getElementById('post-trade-form').reset();
+            document.getElementById('offer-swap-form').reset();
+            document.getElementById('claim-shift-form').reset();
+        }
+        function openOfferModal(tradeId) {
+            document.getElementById('target-trade-id').value = tradeId;
+            document.getElementById('offer-modal').style.display = 'flex';
+        }
+        function openClaimModal(tradeId) {
+            document.getElementById('claim-trade-id').value = tradeId;
+            document.getElementById('claim-modal').style.display = 'flex';
+        }
+
+        async function submitTradePost(e) {
+            e.preventDefault();
+            const dateStr = document.getElementById('post-date').value;
+            
+            const tradeData = {
+                guardAName: document.getElementById('post-name').value,
+                siteA: document.getElementById('post-site').value,
+                dateA: formatDateStr(dateStr),
+                dateA_Raw: dateStr,
+                timeA: document.getElementById('post-time').value,
+                availability: document.getElementById('post-availability').value,
+                status: "Open",
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            };
+
+            await db.collection("trades").add(tradeData);
+            alert("Shift posted to Trade Board!");
+            closeModals();
+        }
+
+        async function submitOffer(e) {
+            e.preventDefault();
+            const tradeId = document.getElementById('target-trade-id').value;
+            const dateStr = document.getElementById('offer-date').value;
+
+            const offerData = {
+                guardBName: document.getElementById('offer-name').value,
+                siteB: document.getElementById('offer-site').value,
+                dateB: formatDateStr(dateStr),
+                timeB: document.getElementById('offer-time').value,
+                trainingNeeded: document.getElementById('offer-training').value,
+                status: "Pending Ops Approval"
+            };
+
+            await db.collection("trades").doc(tradeId).update(offerData);
+            alert("Swap proposed! Sent to Ops for approval.");
+            closeModals();
+        }
+
+        async function submitClaim(e) {
+            e.preventDefault();
+            const tradeId = document.getElementById('claim-trade-id').value;
+
+            const claimData = {
+                guardBName: document.getElementById('claim-name').value,
+                siteB: "None (Giveaway)",
+                dateB: "N/A",
+                timeB: "N/A",
+                trainingNeeded: document.getElementById('claim-training').value,
+                status: "Pending Ops Approval"
+            };
+
+            await db.collection("trades").doc(tradeId).update(claimData);
+            alert("Shift claimed! Sent to Ops for approval.");
+            closeModals();
+        }
+
+        // Live Feed Listener
+        db.collection("trades").where("status", "==", "Open").onSnapshot((snapshot) => {
+            const feed = document.getElementById('trade-feed');
+            feed.innerHTML = '';
+            const openCount = snapshot.size;
+
+            if (openCount === 0) {
+                tickerElement.innerHTML = `🔄 <span class="ticker-highlight">NO ACTIVE TRADE REQUESTS</span> &bull; Post a shift to trade or give away &bull; All trades require Ops approval`;
+                feed.innerHTML = '<p style="text-align:center; color:#666; margin-top:40px;">No shifts currently looking for trades.</p>';
+                return;
+            }
+
+            tickerElement.innerHTML = `🔄 <span class="ticker-highlight">${openCount} TRADE/GIVEAWAY LISTING${openCount > 1 ? 'S' : ''} ACTIVE</span> &bull; Submit proposals directly on shift cards &bull; Final approvals subject to OT limits and site qualifications`;
+
+            snapshot.forEach((doc) => {
+                const tr = doc.data();
+                const isGiveaway = tr.availability === "Just need off (No Swap)";
+                
+                const badgeText = isGiveaway ? "Giveaway" : "Seeking Swap";
+                const badgeColor = isGiveaway ? "var(--success)" : "var(--warning)";
+                const buttonHtml = isGiveaway 
+                    ? `<button class="btn-offer" style="background-color: var(--oculus-blue);" onclick="openClaimModal('${doc.id}')">Claim Shift (No Swap)</button>`
+                    : `<button class="btn-offer" onclick="openOfferModal('${doc.id}')">Propose Shift Swap</button>`;
+                
+                feed.innerHTML += `
+                    <div class="trade-card" style="border-left-color: ${badgeColor};">
+                        <div class="trade-header">
+                            <h3>Officer ${tr.guardAName}</h3>
+                            <span class="badge" style="background-color: ${badgeColor};">${badgeText}</span>
+                        </div>
+                        <div class="trade-details">
+                            <span class="label">Shift Giving Up:</span>
+                            <span class="data">${tr.siteA}</span><br>
+                            <span class="data">${tr.dateA} | ${tr.timeA}</span>
+                            
+                            <span class="label">Available To Work Instead:</span>
+                            <span class="data" style="color:var(--oculus-blue)">${tr.availability}</span>
+                        </div>
+                        ${buttonHtml}
+                    </div>
+                `;
+            });
+        });
+    </script>
+</body>
+</html>
             --gray: #6b7280;
         }
         body { font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: var(--primary-bg); margin: 0; padding: 0; color: var(--text-main); }
