@@ -166,9 +166,48 @@
                     </div>
                 </div>
 
+                <div class="form-group">
+                    <label>Have you worked Guard A's site before?</label>
+                    <select id="offer-training" required>
+                        <option value="" disabled selected>Select status...</option>
+                        <option value="Trained">Yes, I have worked there before</option>
+                        <option value="Needs OJT">No, I have never worked there</option>
+                    </select>
+                </div>
+
                 <div class="modal-actions">
                     <button type="button" class="btn-cancel" onclick="closeModals()">Cancel</button>
                     <button type="submit" class="btn-submit">Submit Proposal to Ops</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL 3: Claim a Giveaway (No Swap) -->
+    <div class="modal-overlay" id="claim-modal">
+        <div class="modal-content">
+            <h2>Claim Shift</h2>
+            <p style="font-size:12px; color:#666; margin-top:-10px;">Enter your name to request this shift. Ops will review and assign it if approved.</p>
+            
+            <form id="claim-shift-form" onsubmit="submitClaim(event)">
+                <input type="hidden" id="claim-trade-id">
+                <div class="form-group">
+                    <label>Your Name (Last, First)</label>
+                    <input type="text" id="claim-name" required placeholder="e.g. Davis, Robert">
+                </div>
+
+                <div class="form-group">
+                    <label>Have you worked this site before?</label>
+                    <select id="claim-training" required>
+                        <option value="" disabled selected>Select status...</option>
+                        <option value="Trained">Yes, I have worked there before</option>
+                        <option value="Needs OJT">No, I have never worked there</option>
+                    </select>
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" class="btn-cancel" onclick="closeModals()">Cancel</button>
+                    <button type="submit" class="btn-submit" style="background-color: var(--oculus-blue);">Claim Shift</button>
                 </div>
             </form>
         </div>
@@ -200,12 +239,18 @@
         function closeModals() {
             document.getElementById('post-modal').style.display = 'none';
             document.getElementById('offer-modal').style.display = 'none';
+            document.getElementById('claim-modal').style.display = 'none';
             document.getElementById('post-trade-form').reset();
             document.getElementById('offer-swap-form').reset();
+            document.getElementById('claim-shift-form').reset();
         }
         function openOfferModal(tradeId) {
             document.getElementById('target-trade-id').value = tradeId;
             document.getElementById('offer-modal').style.display = 'flex';
+        }
+        function openClaimModal(tradeId) {
+            document.getElementById('claim-trade-id').value = tradeId;
+            document.getElementById('claim-modal').style.display = 'flex';
         }
 
         // Post a Trade to Firestore
@@ -217,7 +262,7 @@
                 guardAName: document.getElementById('post-name').value,
                 siteA: document.getElementById('post-site').value,
                 dateA: formatDateStr(dateStr),
-                dateA_Raw: dateStr, // for sorting
+                dateA_Raw: dateStr,
                 timeA: document.getElementById('post-time').value,
                 availability: document.getElementById('post-availability').value,
                 status: "Open",
@@ -229,7 +274,7 @@
             closeModals();
         }
 
-        // Submit an Offer (Updates the Trade to Pending)
+        // Submit a 1-to-1 Offer
         async function submitOffer(e) {
             e.preventDefault();
             const tradeId = document.getElementById('target-trade-id').value;
@@ -240,6 +285,7 @@
                 siteB: document.getElementById('offer-site').value,
                 dateB: formatDateStr(dateStr),
                 timeB: document.getElementById('offer-time').value,
+                trainingNeeded: document.getElementById('offer-training').value, // Training flag included
                 status: "Pending Ops Approval"
             };
 
@@ -248,8 +294,27 @@
             closeModals();
         }
 
-        // Live Feed Listener (Only shows 'Open' trades)
-        db.collection("trades").where("status", "==", "Open").orderBy("dateA_Raw", "asc").onSnapshot((snapshot) => {
+        // Submit a Direct Claim (No Swap)
+        async function submitClaim(e) {
+            e.preventDefault();
+            const tradeId = document.getElementById('claim-trade-id').value;
+
+            const claimData = {
+                guardBName: document.getElementById('claim-name').value,
+                siteB: "None (Giveaway)",
+                dateB: "N/A",
+                timeB: "N/A",
+                trainingNeeded: document.getElementById('claim-training').value, // Training flag included
+                status: "Pending Ops Approval"
+            };
+
+            await db.collection("trades").doc(tradeId).update(claimData);
+            alert("Shift claimed! Sent to Ops for approval.");
+            closeModals();
+        }
+
+        // Live Feed Listener (Removed chronological ordering to prevent the Index block for testing)
+        db.collection("trades").where("status", "==", "Open").onSnapshot((snapshot) => {
             const feed = document.getElementById('trade-feed');
             feed.innerHTML = '';
 
@@ -260,12 +325,19 @@
 
             snapshot.forEach((doc) => {
                 const tr = doc.data();
+                const isGiveaway = tr.availability === "Just need off (No Swap)";
+                
+                const badgeText = isGiveaway ? "Giveaway" : "Seeking Swap";
+                const badgeColor = isGiveaway ? "var(--success)" : "var(--warning)";
+                const buttonHtml = isGiveaway 
+                    ? `<button class="btn-offer" style="background-color: var(--oculus-blue);" onclick="openClaimModal('${doc.id}')">Claim Shift (No Swap)</button>`
+                    : `<button class="btn-offer" onclick="openOfferModal('${doc.id}')">Propose Shift Swap</button>`;
                 
                 feed.innerHTML += `
-                    <div class="trade-card">
+                    <div class="trade-card" style="border-left-color: ${badgeColor};">
                         <div class="trade-header">
                             <h3>Officer ${tr.guardAName}</h3>
-                            <span class="badge">Seeking Swap</span>
+                            <span class="badge" style="background-color: ${badgeColor};">${badgeText}</span>
                         </div>
                         <div class="trade-details">
                             <span class="label">Shift Giving Up:</span>
@@ -275,7 +347,7 @@
                             <span class="label">Available To Work Instead:</span>
                             <span class="data" style="color:var(--oculus-blue)">${tr.availability}</span>
                         </div>
-                        <button class="btn-offer" onclick="openOfferModal('${doc.id}')">Propose Shift Swap</button>
+                        ${buttonHtml}
                     </div>
                 `;
             });
