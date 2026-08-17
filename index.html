@@ -37,7 +37,7 @@
             display: inline-block;
             white-space: nowrap;
             padding-left: 100%;
-            animation: ticker 28s linear infinite;
+            animation: ticker 32s linear infinite;
             color: #ffffff;
             font-size: 13px;
             font-weight: 600;
@@ -104,8 +104,7 @@
             projectId: "oculus-opne-shift-board",
             storageBucket: "oculus-opne-shift-board.firebasestorage.app",
             messagingSenderId: "282551856349",
-            appId: "1:282551856349:web:981dcb99fa0a3762353f34",
-            measurementId: "G-109T25DMNY"
+            appId: "1:282551856349:web:981dcb99fa0a3762353f34"
         };
 
         firebase.initializeApp(firebaseConfig);
@@ -181,12 +180,22 @@
                 const latestText = newestShift 
                     ? `LATEST POST: <span class="ticker-highlight">${newestShift.site} (${newestShift.dateDisplay})</span>` 
                     : `LATEST POSTS ACTIVE`;
-tickerElement.innerHTML = `🟢 <span class="ticker-highlight">${openCount} OPEN SHIFT${openCount > 1 ? 'S' : ''} AVAILABLE</span> &bull; ${latestText} &bull; Tap "Text to Bid" to submit a shift request &bull; Shifts awarded based on site qualifications, OT limits, and fair scheduling`;            }
+                tickerElement.innerHTML = `🟢 <span class="ticker-highlight">${openCount} OPEN SHIFT${openCount > 1 ? 'S' : ''} AVAILABLE</span> &bull; ${latestText} &bull; Tap "Text to Bid" to submit a shift request &bull; Shifts awarded based on site qualifications, OT limits, and fair scheduling`;
+            }
         });
 
+        // The updated Text to Bid function with the Training/OJT check
         function textToBid(site, date, time) {
+            // Ask the guard if they are trained before opening their text app
+            const isTrained = confirm(`Have you worked at ${site} before?\n\nTap OK for YES (Already Trained).\nTap Cancel for NO (Need Training).`);
+            
+            const trainingStatus = isTrained 
+                ? "I have worked this site before." 
+                : "I HAVE NEVER WORKED THIS SITE and will need training.";
+
             const numbers = ["17204354166", "17206622968", "17206466162", "17205176386", "17204760104"];
-            const messageText = `Hey team, I would like to bid on the shift at ${site} on ${date} (${time}).`;
+            const messageText = `Hey team, I would like to bid on the shift at ${site} on ${date} (${time}). ${trainingStatus}`;
+            
             const encodedMessage = encodeURIComponent(messageText);
             const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
             const smsLink = isIOS 
