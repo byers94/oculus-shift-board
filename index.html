@@ -15,11 +15,46 @@
             --badge-firewatch: #ef4444;
             --badge-calloff: #f97316;
             --badge-filled: #6b7280;
+            --ticker-bg: #0f172a;
+            --ticker-text: #38bdf8;
         }
         body { font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: var(--primary-bg); margin: 0; padding: 0; color: var(--text-main); }
-        header { background-color: var(--oculus-blue); color: white; padding: 20px; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        header { background-color: var(--oculus-blue); color: white; padding: 20px 20px 14px 20px; text-align: center; }
         header h1 { margin: 0; font-size: 24px; letter-spacing: 1px; }
-        header p { margin: 5px 0 0 0; font-size: 14px; opacity: 0.8; }
+        header p { margin: 4px 0 0 0; font-size: 14px; opacity: 0.8; }
+        
+        /* Stock Ticker Bar */
+        .ticker-wrap {
+            width: 100%;
+            overflow: hidden;
+            background-color: var(--ticker-bg);
+            padding: 8px 0;
+            box-sizing: border-box;
+            border-bottom: 2px solid #2563eb;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+        }
+        .ticker-move {
+            display: inline-block;
+            white-space: nowrap;
+            padding-left: 100%;
+            animation: ticker 28s linear infinite;
+            color: #ffffff;
+            font-size: 13px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+        .ticker-move:hover, .ticker-move:active {
+            animation-play-state: paused;
+        }
+        .ticker-highlight {
+            color: var(--ticker-text);
+            font-weight: bold;
+        }
+        @keyframes ticker {
+            0% { transform: translate3d(0, 0, 0); }
+            100% { transform: translate3d(-100%, 0, 0); }
+        }
+
         .container { max-width: 600px; margin: 20px auto; padding: 0 15px; }
         .shift-card { background-color: var(--card-bg); border-radius: 10px; padding: 20px; margin-bottom: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border-left: 5px solid var(--badge-standard); transition: transform 0.2s; }
         .shift-card:hover { transform: translateY(-2px); }
@@ -50,6 +85,14 @@
         <h1>OCULUS SYSTEMS SECURITY</h1>
         <p>Live Shift Bulletin Dashboard</p>
     </header>
+
+    <!-- Animated Ticker Bar -->
+    <div class="ticker-wrap">
+        <div class="ticker-move" id="ticker-content">
+            🟢 LIVE FEED ACTIVE &bull; Syncing shift database...
+        </div>
+    </div>
+
     <div class="container" id="feed">
         <p style="text-align:center; color:#666; margin-top:40px;">Loading shifts...</p>
     </div>
@@ -68,21 +111,34 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
         const feedContainer = document.getElementById('feed');
+        const tickerElement = document.getElementById('ticker-content');
 
         // Real-time listener for shifts
         db.collection("shifts").orderBy("startIso", "asc").onSnapshot((snapshot) => {
             feedContainer.innerHTML = '';
             const now = new Date();
-            let count = 0;
+            let openCount = 0;
+            let newestShift = null;
+            let newestTimestamp = 0;
 
             snapshot.forEach((doc) => {
                 const shift = doc.data();
                 const shiftStart = new Date(shift.startIso);
 
-                // Auto drop-off: hide if start time has already passed
+                // Auto drop-off past shifts
                 if (shiftStart <= now) return;
 
-                count++;
+                if (shift.urgency !== "Filled") {
+                    openCount++;
+                }
+
+                // Check newest shift added
+                const createdTime = shift.createdAt ? shift.createdAt.toMillis() : 0;
+                if (createdTime > newestTimestamp) {
+                    newestTimestamp = createdTime;
+                    newestShift = shift;
+                }
+
                 let badgeClass = "standard";
                 let cardClass = "";
                 let buttonHTML = `<button class="assign-btn" onclick="textToBid('${shift.site}', '${shift.dateDisplay}', '${shift.timeDisplay}')">Text to Bid</button>`;
@@ -117,8 +173,15 @@
                 feedContainer.innerHTML += cardHTML;
             });
 
-            if (count === 0) {
+            // Update ticker text dynamically
+            if (openCount === 0) {
+                tickerElement.innerHTML = `🟢 <span class="ticker-highlight">ALL SHIFTS CURRENTLY COVERED</span> &bull; Check back soon for new open posts &bull; Live dispatch updates active`;
                 feedContainer.innerHTML = '<p style="text-align:center; color:#666; margin-top:40px;">All shifts are currently filled.</p>';
+            } else {
+                const latestText = newestShift 
+                    ? `LATEST POST: <span class="ticker-highlight">${newestShift.site} (${newestShift.dateDisplay})</span>` 
+                    : `LATEST POSTS ACTIVE`;
+                tickerElement.innerHTML = `🟢 <span class="ticker-highlight">${openCount} OPEN SHIFT${openCount > 1 ? 'S' : ''} AVAILABLE</span> &bull; ${latestText} &bull; Tap "Text to Bid" to claim shifts directly with dispatch &bull; Shifts awarded on first-contact basis`;
             }
         });
 
