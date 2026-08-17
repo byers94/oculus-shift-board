@@ -181,8 +181,7 @@
                 const latestText = newestShift 
                     ? `LATEST POST: <span class="ticker-highlight">${newestShift.site} (${newestShift.dateDisplay})</span>` 
                     : `LATEST POSTS ACTIVE`;
-                tickerElement.innerHTML = `🟢 <span class="ticker-highlight">${openCount} OPEN SHIFT${openCount > 1 ? 'S' : ''} AVAILABLE</span> &bull; ${latestText} &bull; Tap "Text to Bid" to claim shifts directly with dispatch &bull; Shifts awarded on first-contact basis`;
-            }
+tickerElement.innerHTML = `🟢 <span class="ticker-highlight">${openCount} OPEN SHIFT${openCount > 1 ? 'S' : ''} AVAILABLE</span> &bull; ${latestText} &bull; Tap "Text to Bid" to submit a shift request &bull; Shifts awarded based on site qualifications, OT limits, and fair scheduling`;            }
         });
 
         function textToBid(site, date, time) {
