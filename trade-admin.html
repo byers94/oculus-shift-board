@@ -11,16 +11,21 @@
             --oculus-blue: #1e3a8a;
             --success: #10b981;
             --danger: #ef4444;
+            --warning: #f59e0b;
             --gray: #6b7280;
         }
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: var(--primary-bg); margin: 0; padding: 0; color: #1f2937; }
         header { background-color: var(--oculus-blue); color: white; padding: 16px; text-align: center; font-size: 20px; font-weight: bold; }
-        .container { max-width: 700px; margin: 20px auto; padding: 0 15px; }
+        .container { max-width: 800px; margin: 20px auto; padding: 0 15px; }
         
-        .approval-card { background: white; border-radius: 8px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); border-top: 4px solid #f59e0b; }
+        /* Section Headers */
+        .section-title { font-size: 18px; color: var(--oculus-blue); border-bottom: 2px solid #e5e7eb; padding-bottom: 8px; margin-top: 30px; margin-bottom: 15px; }
+        
+        /* Approval Cards */
+        .approval-card { background: white; border-radius: 8px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); border-top: 4px solid var(--warning); }
         .approval-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid #e5e7eb; padding-bottom: 10px; }
         .approval-header h3 { margin: 0; color: var(--oculus-blue); font-size: 18px; }
-        .status-badge { background: #fef3c7; color: #d97706; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; }
+        .badge-pending { background: #fef3c7; color: #d97706; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; }
         
         .swap-container { display: flex; gap: 15px; margin-bottom: 20px; }
         .swap-box { flex: 1; background: #f8fafc; padding: 15px; border-radius: 6px; border: 1px solid #e2e8f0; }
@@ -34,6 +39,19 @@
         .btn-approve:hover { background-color: #059669; }
         .btn-deny { background-color: var(--danger); }
         .btn-deny:hover { background-color: #dc2626; }
+
+        /* History Cards */
+        .history-card { background: white; border-radius: 6px; padding: 15px; margin-bottom: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border-left: 5px solid #ccc; display: flex; justify-content: space-between; align-items: center; }
+        .history-card.approved { border-left-color: var(--success); }
+        .history-card.denied { border-left-color: var(--danger); }
+        .history-info { flex: 1; }
+        .history-info h4 { margin: 0 0 5px 0; font-size: 15px; }
+        .history-info p { margin: 0; font-size: 13px; color: var(--gray); }
+        .history-status { text-align: right; }
+        .badge-history { padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; }
+        .badge-history.approved { background: #dcfce3; color: #166534; }
+        .badge-history.denied { background: #fee2e2; color: #dc2626; }
+        .deny-reason { font-size: 12px; color: var(--danger); margin-top: 5px; max-width: 200px; }
     </style>
     <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
@@ -43,8 +61,16 @@
 
     <header>Ops Shift Swap Approvals</header>
 
-    <div class="container" id="admin-feed">
-        <p style="text-align:center; color:#666; margin-top:40px;">Scanning for pending swaps...</p>
+    <div class="container">
+        <h2 class="section-title">Action Required: Pending Swaps</h2>
+        <div id="admin-feed">
+            <p style="text-align:center; color:#666; margin-top:20px;">Scanning for pending swaps...</p>
+        </div>
+
+        <h2 class="section-title">Recent Swap History</h2>
+        <div id="history-feed">
+            <p style="text-align:center; color:#666; margin-top:20px;">Loading history...</p>
+        </div>
     </div>
 
     <script>
@@ -60,78 +86,131 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
-        // Listen for Trades that need Ops Approval
-        db.collection("trades").where("status", "==", "Pending Ops Approval").onSnapshot((snapshot) => {
-            const feed = document.getElementById('admin-feed');
-            feed.innerHTML = '';
+        // One Master Listener for everything to avoid index requirements
+        db.collection("trades").onSnapshot((snapshot) => {
+            let trades = [];
+            snapshot.forEach(doc => {
+                trades.push({ id: doc.id, ...doc.data() });
+            });
 
-            if (snapshot.empty) {
-                feed.innerHTML = '<p style="text-align:center; color:#666; margin-top:40px; font-size:16px;">No pending swaps require approval at this time.</p>';
-                return;
-            }
+            // Sort newest first using javascript
+            trades.sort((a, b) => {
+                const timeA = a.createdAt ? a.createdAt.toMillis() : 0;
+                const timeB = b.createdAt ? b.createdAt.toMillis() : 0;
+                return timeB - timeA;
+            });
 
-            snapshot.forEach((doc) => {
-                const tr = doc.data();
-                
-                feed.innerHTML += `
-                    <div class="approval-card">
-                        <div class="approval-header">
-                            <h3>Swap Request Review</h3>
-                            <span class="status-badge">Action Required</span>
-                        </div>
-                        
-                        <div class="swap-container">
-                            <!-- Guard A Data -->
-                            <div class="swap-box">
-                                <h4>Officer ${tr.guardAName} gets:</h4>
-                                <div class="swap-detail"><strong>Site:</strong> ${tr.siteB}</div>
-                                <div class="swap-detail"><strong>Date:</strong> ${tr.dateB}</div>
-                                <div class="swap-detail"><strong>Time:</strong> ${tr.timeB}</div>
+            const pendingFeed = document.getElementById('admin-feed');
+            const historyFeed = document.getElementById('history-feed');
+            
+            pendingFeed.innerHTML = '';
+            historyFeed.innerHTML = '';
+            
+            let pendingCount = 0;
+            let historyCount = 0;
+
+            trades.forEach((tr) => {
+                if (tr.status === "Pending Ops Approval") {
+                    pendingCount++;
+                    pendingFeed.innerHTML += `
+                        <div class="approval-card">
+                            <div class="approval-header">
+                                <h3>Swap Request Review</h3>
+                                <span class="badge-pending">Action Required</span>
                             </div>
                             
-                            <!-- Guard B Data -->
-                            <div class="swap-box">
-                                <h4>Officer ${tr.guardBName} gets:</h4>
-                                <div class="swap-detail"><strong>Site:</strong> ${tr.siteA}</div>
-                                <div class="swap-detail"><strong>Date:</strong> ${tr.dateA}</div>
-                                <div class="swap-detail"><strong>Time:</strong> ${tr.timeA}</div>
-                                <div style="margin-top: 10px;">
-                                    ${tr.trainingNeeded === 'Needs OJT' 
-                                        ? '<span class="status-badge" style="background:#fee2e2; color:#dc2626;">🔴 OJT REQUIRED</span>' 
-                                        : '<span class="status-badge" style="background:#dcfce3; color:#166534;">🟢 Previously Trained</span>'}
+                            <div class="swap-container">
+                                <!-- Guard A Data -->
+                                <div class="swap-box">
+                                    <h4>Officer ${tr.guardAName} gets:</h4>
+                                    <div class="swap-detail"><strong>Site:</strong> ${tr.siteB}</div>
+                                    <div class="swap-detail"><strong>Date:</strong> ${tr.dateB}</div>
+                                    <div class="swap-detail"><strong>Time:</strong> ${tr.timeB}</div>
+                                </div>
+                                
+                                <!-- Guard B Data -->
+                                <div class="swap-box">
+                                    <h4>Officer ${tr.guardBName} gets:</h4>
+                                    <div class="swap-detail"><strong>Site:</strong> ${tr.siteA}</div>
+                                    <div class="swap-detail"><strong>Date:</strong> ${tr.dateA}</div>
+                                    <div class="swap-detail"><strong>Time:</strong> ${tr.timeA}</div>
+                                    <div style="margin-top: 10px;">
+                                        ${tr.trainingNeeded === 'Needs OJT' 
+                                            ? '<span class="badge-history denied">🔴 OJT REQUIRED</span>' 
+                                            : '<span class="badge-history approved">🟢 Previously Trained</span>'}
+                                    </div>
                                 </div>
                             </div>
-                        </div>
 
-                        <div class="action-buttons">
-                            <button class="btn btn-deny" onclick="denySwap('${doc.id}')">Deny & Reset</button>
-                            <button class="btn btn-approve" onclick="approveSwap('${doc.id}')">Approve Swap</button>
+                            <div class="action-buttons">
+                                <button class="btn btn-deny" onclick="denySwap('${tr.id}')">Deny & Reset</button>
+                                <button class="btn btn-approve" onclick="approveSwap('${tr.id}')">Approve Swap</button>
+                            </div>
                         </div>
-                    </div>
-                `;
+                    `;
+                } else if (tr.status === "Approved - Final" || tr.status === "Denied") {
+                    historyCount++;
+                    const isApp = tr.status === "Approved - Final";
+                    const statusClass = isApp ? "approved" : "denied";
+                    const statusText = isApp ? "APPROVED" : "DENIED";
+                    
+                    historyFeed.innerHTML += `
+                        <div class="history-card ${statusClass}">
+                            <div class="history-info">
+                                <h4>${tr.guardAName} ↔ ${tr.guardBName}</h4>
+                                <p><strong>A gave:</strong> ${tr.siteA} (${tr.dateA}) | <strong>B gave:</strong> ${tr.siteB} (${tr.dateB})</p>
+                            </div>
+                            <div class="history-status">
+                                <span class="badge-history ${statusClass}">${statusText}</span>
+                                ${!isApp && tr.denyReason ? `<div class="deny-reason">Reason: ${tr.denyReason}</div>` : ''}
+                            </div>
+                        </div>
+                    `;
+                }
             });
+
+            if (pendingCount === 0) pendingFeed.innerHTML = '<p style="text-align:center; color:#666;">No pending swaps require approval at this time.</p>';
+            if (historyCount === 0) historyFeed.innerHTML = '<p style="text-align:center; color:#666;">No recent trade history.</p>';
         });
 
-        // Approve Function: Marks Trade as Official
+        // Approve Function
         async function approveSwap(id) {
             if(confirm("Confirm this swap? Both guards will be officially reassigned.")) {
                 await db.collection("trades").doc(id).update({ status: "Approved - Final" });
             }
         }
 
-        // Deny Function: Kicks the original shift back to the Open Board and clears Guard B's offer
+        // Updated Deny Function: Saves history AND reposts Guard A's original shift
         async function denySwap(id) {
-            const reason = prompt("Enter deny reason (e.g., Overtime, Missing Certs):");
+            const reason = prompt("Enter deny reason (e.g., Overtime, Missing Certs). This will be saved to history:");
             if (reason !== null) {
-                await db.collection("trades").doc(id).update({
-                    status: "Open",
-                    guardBName: firebase.firestore.FieldValue.delete(),
-                    siteB: firebase.firestore.FieldValue.delete(),
-                    dateB: firebase.firestore.FieldValue.delete(),
-                    timeB: firebase.firestore.FieldValue.delete(),
-                    trainingNeeded: firebase.firestore.FieldValue.delete() // Clear training flag on deny
-                });
-                alert(`Swap denied. Officer A's shift has been placed back on the Open Trade Board.`);
+                // Fetch the specific document data first
+                const docRef = db.collection("trades").doc(id);
+                const docSnap = await docRef.get();
+                
+                if(docSnap.exists) {
+                    const tr = docSnap.data();
+                    
+                    // 1. Mark this specific transaction as permanently denied for the history log
+                    await docRef.update({
+                        status: "Denied",
+                        denyReason: reason
+                    });
+
+                    // 2. Automatically repost Guard A's original shift to the Open Trade Board
+                    await db.collection("trades").add({
+                        guardAName: tr.guardAName,
+                        siteA: tr.siteA,
+                        dateA: tr.dateA,
+                        dateA_Raw: tr.dateA_Raw,
+                        timeA: tr.timeA,
+                        availability: tr.availability,
+                        status: "Open",
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+
+                    alert(`Swap denied and logged. Officer A's shift has automatically been placed back on the Open Trade Board.`);
+                }
             }
         }
     </script>
