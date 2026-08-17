@@ -112,7 +112,7 @@
     <div class="modal-overlay" id="post-modal">
         <div class="modal-content">
             <h2>Post Shift to Trade Board</h2>
-            <p style="font-size:12px; color:#666; margin-top:-10px;">Select the shift you want to give up, and the dates you are willing to work instead.</p>
+            <p style="font-size:12px; color:#666; margin-top:-10px;">Select the shift you want to give up. Ops must approve this before it appears on the board.</p>
             
             <form id="post-trade-form" onsubmit="submitTradePost(event)">
                 <div class="form-group">
@@ -162,7 +162,7 @@
 
                 <div class="modal-actions">
                     <button type="button" class="btn-cancel" onclick="closeModals()">Cancel</button>
-                    <button type="submit" class="btn-submit">Submit to Board</button>
+                    <button type="submit" class="btn-submit">Submit for Ops Approval</button>
                 </div>
             </form>
         </div>
@@ -308,12 +308,12 @@
                 dateA_Raw: dateStr,
                 timeA: document.getElementById('post-time').value,
                 availability: document.getElementById('post-availability').value,
-                status: "Open",
+                status: "Pending Post Approval", // NEW: Requires Ops approval to hit the board
                 createdAt: firebase.firestore.FieldValue.serverTimestamp()
             };
 
             await db.collection("trades").add(tradeData);
-            alert("Shift posted to Trade Board!");
+            alert("Shift submitted! It will appear on the board once Ops approves it.");
             closeModals();
         }
 
@@ -354,14 +354,14 @@
             closeModals();
         }
 
-        // Live Feed Listener
+        // Live Feed Listener (Only shows shifts Ops has approved to "Open")
         db.collection("trades").where("status", "==", "Open").onSnapshot((snapshot) => {
             const feed = document.getElementById('trade-feed');
             feed.innerHTML = '';
             const openCount = snapshot.size;
 
             if (openCount === 0) {
-                tickerElement.innerHTML = `🔄 <span class="ticker-highlight">NO ACTIVE TRADE REQUESTS</span> &bull; Post a shift to trade or give away &bull; All trades require Ops approval`;
+                tickerElement.innerHTML = `🔄 <span class="ticker-highlight">NO ACTIVE TRADE REQUESTS</span> &bull; Post a shift to trade or give away &bull; All posts and trades require Ops approval`;
                 feed.innerHTML = '<p style="text-align:center; color:#666; margin-top:40px;">No shifts currently looking for trades.</p>';
                 return;
             }
