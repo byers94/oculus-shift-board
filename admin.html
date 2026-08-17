@@ -3,182 +3,166 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Oculus Shift Board Admin</title>
+    <title>Oculus Shift Admin Portal</title>
     <style>
         :root {
-            --bg: #f3f4f6;
+            --primary-bg: #f3f4f6;
             --card-bg: #ffffff;
-            --primary: #1e3a8a;
+            --oculus-blue: #1e3a8a;
             --success: #10b981;
             --danger: #ef4444;
-            --warning: #f97316;
+            --warning: #f59e0b;
             --gray: #6b7280;
         }
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: var(--bg); margin: 0; padding: 0; color: #1f2937; }
-        header { background-color: var(--primary); color: white; padding: 16px; text-align: center; font-size: 20px; font-weight: bold; }
-        .container { max-width: 600px; margin: 15px auto; padding: 0 15px; }
-        .card { background: white; border-radius: 8px; padding: 20px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-        h2 { margin-top: 0; font-size: 18px; color: var(--primary); border-bottom: 2px solid #e5e7eb; padding-bottom: 8px; }
-        .form-group { margin-bottom: 12px; }
-        label { display: block; font-size: 13px; font-weight: bold; margin-bottom: 4px; color: #4b5563; }
-        input, select, textarea { width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; box-sizing: border-box; font-size: 15px; background: white; }
-        textarea { font-family: monospace; font-size: 13px; resize: vertical; }
-        .row { display: flex; gap: 10px; }
-        .row .form-group { flex: 1; }
-        button.submit-btn { width: 100%; background: var(--success); color: white; padding: 12px; border: none; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 5px; }
-        button.submit-btn:hover { background: #059669; }
-        button.bulk-btn { background: var(--primary); }
-        button.bulk-btn:hover { background: #172554; }
-        .shift-item { border: 1px solid #e5e7eb; border-left: 4px solid var(--primary); border-radius: 6px; padding: 12px; margin-bottom: 10px; background: #fafafa; }
-        .shift-item.filled { border-left-color: var(--gray); opacity: 0.7; }
-        .shift-item.calloff { border-left-color: var(--warning); }
-        .shift-item.emergency { border-left-color: var(--danger); }
-        .shift-header { display: flex; justify-content: space-between; font-weight: bold; font-size: 15px; }
-        .shift-meta { font-size: 13px; color: #4b5563; margin: 4px 0 8px 0; }
-        .shift-actions { display: flex; gap: 8px; }
-        .action-btn { flex: 1; padding: 8px; border: none; border-radius: 4px; font-weight: bold; font-size: 13px; cursor: pointer; }
-        .btn-fill { background: var(--gray); color: white; }
-        .btn-unfill { background: var(--primary); color: white; }
-        .btn-delete { background: #fee2e2; color: var(--danger); }
-        #auth-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: flex; align-items: center; justify-content: center; z-index: 100; }
-        .auth-card { background: white; padding: 25px; border-radius: 8px; width: 90%; max-width: 320px; text-align: center; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: var(--primary-bg); margin: 0; padding: 0; color: #1f2937; }
+        header { background-color: var(--oculus-blue); color: white; padding: 16px; text-align: center; font-size: 20px; font-weight: bold; }
+        .container { max-width: 800px; margin: 20px auto; padding: 0 15px; }
+        
+        /* Form Sections */
+        .admin-section { background: var(--card-bg); border-radius: 8px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); border-top: 4px solid var(--oculus-blue); }
+        .admin-section h2 { margin-top: 0; font-size: 18px; color: var(--oculus-blue); border-bottom: 1px solid #e5e7eb; padding-bottom: 10px; }
+        
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; font-size: 13px; font-weight: bold; color: #555; margin-bottom: 5px; }
+        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; font-size: 14px; }
+        
+        .btn { padding: 10px 15px; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; color: white; display: inline-block; width: 100%; text-align: center; font-size: 14px; }
+        .btn-submit { background-color: var(--oculus-blue); }
+        .btn-submit:hover { background-color: #172554; }
+        .btn-bulk { background-color: var(--warning); color: #fff; }
+        .btn-bulk:hover { background-color: #d97706; }
+        
+        /* Feed Sections */
+        .shift-item { border: 1px solid #e5e7eb; border-radius: 6px; padding: 15px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; background: #fff; }
+        .shift-info { flex: 2; }
+        .shift-info h4 { margin: 0 0 5px 0; font-size: 16px; }
+        .shift-info p { margin: 0; font-size: 13px; color: var(--gray); }
+        
+        .shift-actions { flex: 1; text-align: right; display: flex; gap: 8px; justify-content: flex-end; }
+        .btn-small { padding: 6px 10px; border: none; border-radius: 4px; font-size: 12px; font-weight: bold; cursor: pointer; color: white; }
+        .btn-fill { background-color: var(--success); }
+        .btn-fill:hover { background-color: #059669; }
+        .btn-delete { background-color: var(--danger); }
+        .btn-delete:hover { background-color: #dc2626; }
     </style>
     <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 </head>
 <body>
-    <div id="auth-overlay">
-        <div class="auth-card">
-            <h3>Admin Access</h3>
-            <p style="font-size:13px; color:#666;">Enter Supervisor PIN</p>
-            <input type="password" id="pin-input" placeholder="PIN" style="text-align:center; font-size:22px; letter-spacing:4px; margin-bottom:12px;" />
-            <button class="submit-btn" onclick="checkPin()">Enter</button>
-        </div>
-    </div>
 
-    <header>Oculus Shift Board Admin</header>
+    <header>Oculus Ops Control Panel</header>
 
-    <div class="container" id="admin-panel" style="display:none;">
+    <div class="container">
         
-        <!-- Bulk Add Section -->
-        <div class="card">
-            <h2>Mass / Bulk Import Shifts</h2>
-            <p style="font-size: 13px; color: #666; margin-top: -4px;">Paste the formatted shift data block to add multiple shifts simultaneously.</p>
-            <textarea id="bulk-input" rows="5" placeholder='[&#10;  { "site": "Alton Jefferson Garage Watch", "date": "Mon 17 Aug 2026", "time": "18:00 - 06:00", "hours": "12 Hours", "urgency": "Standard" }&#10;]'></textarea>
-            <button type="button" class="submit-btn bulk-btn" onclick="bulkAddShifts()">⚡ Bulk Upload Shifts</button>
-        </div>
-
-        <!-- Single Shift Add Form -->
-        <div class="card">
-            <h2>Add Single Shift</h2>
-            <form id="add-shift-form" onsubmit="addShift(event)">
+        <!-- SINGLE SHIFT ADD -->
+        <div class="admin-section">
+            <h2>Post Single Open Shift</h2>
+            <form id="add-shift-form" onsubmit="addSingleShift(event)">
                 <div class="form-group">
                     <label>Site Name</label>
-                    <input type="text" id="site" required placeholder="e.g. Alton Jefferson Garage Watch">
+                    <input type="text" id="site" required placeholder="e.g. Mint Urban Infinity">
                 </div>
-                <div class="form-group">
-                    <label>Shift Date</label>
-                    <input type="date" id="date" required>
-                </div>
-                <div class="row">
-                    <div class="form-group">
-                        <label>Start Time (24h)</label>
-                        <select id="start-time" required></select>
+                <div style="display: flex; gap: 10px;">
+                    <div class="form-group" style="flex: 1;">
+                        <label>Date Display</label>
+                        <input type="text" id="dateDisplay" required placeholder="e.g. Mon 17 Aug 2026">
                     </div>
-                    <div class="form-group">
-                        <label>End Time (24h)</label>
-                        <select id="end-time" required></select>
+                    <div class="form-group" style="flex: 1;">
+                        <label>Start Date/Time (For Auto-Sorting)</label>
+                        <input type="datetime-local" id="startIso" required>
                     </div>
                 </div>
+                <div style="display: flex; gap: 10px;">
+                    <div class="form-group" style="flex: 1;">
+                        <label>Time Display</label>
+                        <input type="text" id="timeDisplay" required placeholder="e.g. 21:00 - 05:00">
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                        <label>Total Hours</label>
+                        <input type="text" id="hours" required placeholder="e.g. 8 Hours">
+                    </div>
+                </div>
                 <div class="form-group">
-                    <label>Urgency / Type</label>
-                    <select id="urgency">
+                    <label>Urgency / Status</label>
+                    <select id="urgency" required>
                         <option value="Standard">Standard</option>
+                        <option value="Emergency">Emergency</option>
                         <option value="Call-Off">Call-Off</option>
-                        <option value="Emergency">Emergency / Firewatch</option>
                     </select>
                 </div>
-                <button type="submit" class="submit-btn">+ Post Single Shift</button>
+                <button type="submit" class="btn btn-submit">Post Shift to Live Board</button>
             </form>
         </div>
 
-        <!-- Active Shift List -->
-        <div class="card">
-            <h2>Active Shift Feed</h2>
-            <div id="shift-list">Loading shifts...</div>
+        <!-- BULK IMPORT -->
+        <div class="admin-section" style="border-top-color: var(--warning);">
+            <h2>Mass / Bulk Import Shifts</h2>
+            <p style="font-size:12px; color:#666; margin-top:-5px;">Paste your formatted JSON block here to import multiple shifts at once.</p>
+            <div class="form-group">
+                <textarea id="bulk-json" rows="6" placeholder='[ { "site": "The Forge", "date": "Mon 17 Aug 2026", ... } ]'></textarea>
+            </div>
+            <button class="btn btn-bulk" onclick="bulkImport()">Upload Bulk Shifts</button>
         </div>
+
+        <!-- LIVE SHIFT MANAGEMENT -->
+        <div class="admin-section">
+            <h2>Live Active Shifts</h2>
+            <div id="admin-feed">
+                <p style="text-align:center; color:#666;">Loading shifts...</p>
+            </div>
+        </div>
+
     </div>
 
     <script>
-        const ADMIN_PIN = "1024";
-
-        // Populate 24-Hour dropdown options
-        function populateTimeDropdowns() {
-            const startSelect = document.getElementById('start-time');
-            const endSelect = document.getElementById('end-time');
-            startSelect.innerHTML = '<option value="" disabled selected>Select start</option>';
-            endSelect.innerHTML = '<option value="" disabled selected>Select end</option>';
-
-            for (let h = 0; h < 24; h++) {
-                for (let m = 0; m < 60; m += 30) {
-                    const hourStr = String(h).padStart(2, '0');
-                    const minStr = String(m).padStart(2, '0');
-                    const timeVal = `${hourStr}:${minStr}`;
-                    
-                    startSelect.innerHTML += `<option value="${timeVal}">${timeVal}</option>`;
-                    endSelect.innerHTML += `<option value="${timeVal}">${timeVal}</option>`;
-                }
-            }
-        }
-        populateTimeDropdowns();
-
-        function checkPin() {
-            const entered = document.getElementById('pin-input').value;
-            if (entered === ADMIN_PIN) {
-                document.getElementById('auth-overlay').style.display = 'none';
-                document.getElementById('admin-panel').style.display = 'block';
-                loadShifts();
-            } else {
-                alert("Incorrect PIN");
-            }
-        }
-
         const firebaseConfig = {
             apiKey: "AIzaSyD-SxQG5H-gD5UbwbG-PEzu6buAuOFbKSw",
             authDomain: "oculus-opne-shift-board.firebaseapp.com",
             projectId: "oculus-opne-shift-board",
             storageBucket: "oculus-opne-shift-board.firebasestorage.app",
             messagingSenderId: "282551856349",
-            appId: "1:282551856349:web:981dcb99fa0a3762353f34",
-            measurementId: "G-109T25DMNY"
+            appId: "1:282551856349:web:981dcb99fa0a3762353f34"
         };
 
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
-        async function bulkAddShifts() {
-            const raw = document.getElementById('bulk-input').value.trim();
-            if (!raw) {
-                alert("Please paste the shift JSON data first.");
-                return;
-            }
+        // Add Single Shift
+        async function addSingleShift(e) {
+            e.preventDefault();
+            const shiftData = {
+                site: document.getElementById('site').value,
+                dateDisplay: document.getElementById('dateDisplay').value,
+                timeDisplay: document.getElementById('timeDisplay').value,
+                hours: document.getElementById('hours').value,
+                urgency: document.getElementById('urgency').value,
+                startIso: new Date(document.getElementById('startIso').value).toISOString(),
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            };
 
+            await db.collection("shifts").add(shiftData);
+            alert("Shift successfully posted!");
+            document.getElementById('add-shift-form').reset();
+        }
+
+        // Bulk Import JSON
+        async function bulkImport() {
+            const jsonText = document.getElementById('bulk-json').value;
+            if(!jsonText) return alert("Please paste the JSON block first.");
+            
             try {
-                const shifts = JSON.parse(raw);
-                const batch = db.batch();
-                const monthMap = { "Jan":"01", "Feb":"02", "Mar":"03", "Apr":"04", "May":"05", "Jun":"06", "Jul":"07", "Aug":"08", "Sep":"09", "Oct":"10", "Nov":"11", "Dec":"12" };
+                const shifts = JSON.parse(jsonText);
+                let count = 0;
+                
+                for (const s of shifts) {
+                    // Extract start time to create ISO sorting string
+                    const startTimeStr = s.time.split('-')[0].trim();
+                    const dateParts = s.date.split(' '); // e.g., "Mon 17 Aug 2026"
+                    const dateOnly = `${dateParts[1]} ${dateParts[2]} ${dateParts[3]}`;
+                    const startIso = new Date(`${dateOnly} ${startTimeStr}`).toISOString();
 
-                shifts.forEach(s => {
-                    const dateParts = s.date.split(" ");
-                    const day = dateParts[1].padStart(2, '0');
-                    const month = monthMap[dateParts[2]];
-                    const year = dateParts[3];
-                    const startTime = s.time.split("-")[0].trim();
-                    const startIso = `${year}-${month}-${day}T${startTime}:00`;
-
-                    const ref = db.collection("shifts").doc();
-                    batch.set(ref, {
+                    await db.collection("shifts").add({
                         site: s.site,
                         dateDisplay: s.date,
                         timeDisplay: s.time,
@@ -187,97 +171,52 @@
                         startIso: startIso,
                         createdAt: firebase.firestore.FieldValue.serverTimestamp()
                     });
-                });
-
-                await batch.commit();
-                alert(`Successfully uploaded ${shifts.length} shifts!`);
-                document.getElementById('bulk-input').value = '';
-            } catch (err) {
-                alert("Invalid shift data format. Error: " + err.message);
+                    count++;
+                }
+                alert(`Successfully imported ${count} shifts!`);
+                document.getElementById('bulk-json').value = '';
+            } catch (error) {
+                alert("Error importing shifts. Please ensure the JSON is formatted exactly as provided.\n" + error.message);
             }
         }
 
-        async function addShift(e) {
-            e.preventDefault();
-            const site = document.getElementById('site').value.trim();
-            const dateVal = document.getElementById('date').value; 
-            const startTime = document.getElementById('start-time').value;
-            const endTime = document.getElementById('end-time').value;
-            const urgency = document.getElementById('urgency').value;
+        // Manage Existing Shifts
+        db.collection("shifts").orderBy("startIso", "asc").onSnapshot((snapshot) => {
+            const feed = document.getElementById('admin-feed');
+            feed.innerHTML = '';
+            const now = new Date();
 
-            const dateParts = dateVal.split('-');
-            const dateObj = new Date(dateParts[0], dateParts[1] - 1, dateParts[2]);
-            const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-            const dateDisplay = `${days[dateObj.getDay()]} ${dateObj.getDate()} ${months[dateObj.getMonth()]} ${dateObj.getFullYear()}`;
+            snapshot.forEach((doc) => {
+                const shift = doc.data();
+                // Hide past shifts from admin view too, just to keep it clean
+                if (new Date(shift.startIso) <= now) return;
 
-            const [sH, sM] = startTime.split(':').map(Number);
-            const [eH, eM] = endTime.split(':').map(Number);
-            let diffHours = (eH + eM/60) - (sH + sM/60);
-            if (diffHours <= 0) diffHours += 24;
-            const hoursDisplay = `${Number.isInteger(diffHours) ? diffHours : diffHours.toFixed(1)} Hours`;
+                const isFilled = shift.urgency === "Filled";
+                const bgStyle = isFilled ? "background-color: #f9fafb; opacity: 0.7;" : "";
 
-            const startIso = `${dateVal}T${startTime}:00`;
-
-            await db.collection("shifts").add({
-                site: site,
-                dateDisplay: dateDisplay,
-                timeDisplay: `${startTime} - ${endTime}`,
-                hours: hoursDisplay,
-                urgency: urgency,
-                startIso: startIso,
-                createdAt: firebase.firestore.FieldValue.serverTimestamp()
-            });
-
-            document.getElementById('add-shift-form').reset();
-            populateTimeDropdowns();
-        }
-
-        function loadShifts() {
-            db.collection("shifts").orderBy("startIso", "asc").onSnapshot((snapshot) => {
-                const list = document.getElementById('shift-list');
-                list.innerHTML = '';
-
-                if (snapshot.empty) {
-                    list.innerHTML = '<p style="color:#666; font-size:14px; text-align:center;">No active shifts found.</p>';
-                    return;
-                }
-
-                snapshot.forEach((doc) => {
-                    const shift = doc.data();
-                    const id = doc.id;
-                    const isFilled = shift.urgency === "Filled";
-                    let urgencyClass = isFilled ? "filled" : (shift.urgency === "Call-Off" ? "calloff" : (shift.urgency === "Emergency" ? "emergency" : ""));
-
-                    const item = document.createElement('div');
-                    item.className = `shift-item ${urgencyClass}`;
-                    item.innerHTML = `
-                        <div class="shift-header">
-                            <span>${shift.site}</span>
-                            <span>${shift.urgency}</span>
-                        </div>
-                        <div class="shift-meta">
-                            ${shift.dateDisplay} | ${shift.timeDisplay} (${shift.hours})
+                feed.innerHTML += `
+                    <div class="shift-item" style="${bgStyle}">
+                        <div class="shift-info">
+                            <h4>${shift.site}</h4>
+                            <p>${shift.dateDisplay} | ${shift.timeDisplay} | Status: <strong>${shift.urgency}</strong></p>
                         </div>
                         <div class="shift-actions">
-                            <button class="action-btn ${isFilled ? 'btn-unfill' : 'btn-fill'}" onclick="toggleFilled('${id}', '${shift.urgency}')">
-                                ${isFilled ? 'Re-open Shift' : 'Mark Filled'}
-                            </button>
-                            <button class="action-btn btn-delete" onclick="deleteShift('${id}')">Delete</button>
+                            ${!isFilled ? `<button class="btn-small btn-fill" onclick="markFilled('${doc.id}')">Mark Filled</button>` : ''}
+                            <button class="btn-small btn-delete" onclick="deleteShift('${doc.id}')">Delete</button>
                         </div>
-                    `;
-                    list.appendChild(item);
-                });
+                    </div>
+                `;
             });
-        }
+        });
 
-        async function toggleFilled(id, currentUrgency) {
-            const newStatus = currentUrgency === "Filled" ? "Standard" : "Filled";
-            await db.collection("shifts").doc(id).update({ urgency: newStatus });
+        async function markFilled(id) {
+            if(confirm("Mark this shift as filled? It will grey out on the guard board.")) {
+                await db.collection("shifts").doc(id).update({ urgency: "Filled" });
+            }
         }
 
         async function deleteShift(id) {
-            if (confirm("Are you sure you want to permanently delete this shift?")) {
+            if(confirm("Permanently delete this shift from the board?")) {
                 await db.collection("shifts").doc(id).delete();
             }
         }
