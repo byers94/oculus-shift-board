@@ -75,6 +75,19 @@
         .assign-btn { background-color: #10b981; color: white; border: none; padding: 10px 20px; border-radius: 5px; font-weight: bold; cursor: pointer; }
         .assign-btn:hover { background-color: #059669; }
         .assign-btn:disabled { background-color: #9ca3af; cursor: not-allowed; }
+
+        /* Custom Modal Styles */
+        .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); align-items: center; justify-content: center; z-index: 100; padding: 15px; }
+        .modal-content { background: white; border-radius: 8px; padding: 25px; width: 100%; max-width: 350px; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .modal-content h2 { margin-top: 0; font-size: 20px; color: var(--oculus-blue); margin-bottom: 10px; }
+        .modal-content p { font-size: 14px; color: #555; margin-bottom: 20px; line-height: 1.5; }
+        .btn-modal { width: 100%; padding: 12px; border: none; border-radius: 6px; font-weight: bold; font-size: 15px; cursor: pointer; margin-bottom: 10px; color: white; }
+        .btn-yes { background-color: #10b981; }
+        .btn-yes:hover { background-color: #059669; }
+        .btn-no { background-color: var(--badge-firewatch); }
+        .btn-no:hover { background-color: #dc2626; }
+        .btn-cancel { background-color: #e5e7eb; color: #374151; margin-bottom: 0; }
+        .btn-cancel:hover { background-color: #d1d5db; }
     </style>
     <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
@@ -95,6 +108,18 @@
 
     <div class="container" id="feed">
         <p style="text-align:center; color:#666; margin-top:40px;">Loading shifts...</p>
+    </div>
+
+    <!-- Custom OJT Modal -->
+    <div class="modal-overlay" id="ojt-modal">
+        <div class="modal-content">
+            <h2>Site Experience</h2>
+            <p>Have you previously worked at <br><strong id="ojt-site-name" style="color: var(--oculus-blue); font-size: 16px;"></strong>?</p>
+            
+            <button class="btn-modal btn-yes" onclick="submitBid('trained')">Yes (Already Trained)</button>
+            <button class="btn-modal btn-no" onclick="submitBid('untrained')">No (Need Training)</button>
+            <button class="btn-modal btn-cancel" onclick="closeOjtModal()">Cancel Bid</button>
+        </div>
     </div>
 
     <script>
@@ -140,7 +165,7 @@
 
                 let badgeClass = "standard";
                 let cardClass = "";
-                let buttonHTML = `<button class="assign-btn" onclick="textToBid('${shift.site}', '${shift.dateDisplay}', '${shift.timeDisplay}')">Text to Bid</button>`;
+                let buttonHTML = `<button class="assign-btn" onclick="openOjtModal('${shift.site}', '${shift.dateDisplay}', '${shift.timeDisplay}')">Text to Bid</button>`;
 
                 if (shift.urgency === "Emergency") {
                     badgeClass = "emergency";
@@ -184,23 +209,37 @@
             }
         });
 
-        // The updated Text to Bid function with the Training/OJT check
-        function textToBid(site, date, time) {
-            // Ask the guard if they are trained before opening their text app
-            const isTrained = confirm(`Have you worked at ${site} before?\n\nTap OK for YES (Already Trained).\nTap Cancel for NO (Need Training).`);
-            
-            const trainingStatus = isTrained 
+        // Current Bid Data Holder
+        let activeBid = {};
+
+        // Open Custom Modal
+        function openOjtModal(site, date, time) {
+            activeBid = { site, date, time };
+            document.getElementById('ojt-site-name').innerText = site;
+            document.getElementById('ojt-modal').style.display = 'flex';
+        }
+
+        // Close Custom Modal
+        function closeOjtModal() {
+            document.getElementById('ojt-modal').style.display = 'none';
+        }
+
+        // Process the Bid and generate text
+        function submitBid(trainingLevel) {
+            const trainingStatus = (trainingLevel === 'trained') 
                 ? "I have worked this site before." 
                 : "I HAVE NEVER WORKED THIS SITE and will need training.";
 
             const numbers = ["17204354166", "17206622968", "17206466162", "17205176386", "17204760104"];
-            const messageText = `Hey team, I would like to bid on the shift at ${site} on ${date} (${time}). ${trainingStatus}`;
+            const messageText = `Hey team, I would like to bid on the shift at ${activeBid.site} on ${activeBid.date} (${activeBid.time}). ${trainingStatus}`;
             
             const encodedMessage = encodeURIComponent(messageText);
             const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
             const smsLink = isIOS 
                 ? `sms://open?addresses=${numbers.join(',')}&body=${encodedMessage}` 
                 : `sms:${numbers.join(';')}?body=${encodedMessage}`;
+            
+            closeOjtModal();
             window.location.href = smsLink;
         }
     </script>
