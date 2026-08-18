@@ -26,11 +26,11 @@
         .form-group label { display: block; font-size: 13px; font-weight: bold; color: #555; margin-bottom: 5px; }
         .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; font-size: 14px; }
         
-        .btn { padding: 10px 15px; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; color: white; display: inline-block; width: 100%; text-align: center; font-size: 14px; }
-        .btn-submit { background-color: var(--oculus-blue); }
-        .btn-submit:hover { background-color: #172554; }
+        .btn { padding: 12px 15px; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; color: white; display: inline-block; width: 100%; text-align: center; font-size: 15px; }
         .btn-bulk { background-color: var(--warning); color: #fff; }
         .btn-bulk:hover { background-color: #d97706; }
+        .btn-submit { background-color: var(--oculus-blue); }
+        .btn-submit:hover { background-color: #172554; }
         
         /* Feed Sections */
         .shift-item { border: 1px solid #e5e7eb; border-radius: 6px; padding: 15px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; background: #fff; }
@@ -39,7 +39,7 @@
         .shift-info p { margin: 0; font-size: 13px; color: var(--gray); }
         
         .shift-actions { flex: 1; text-align: right; display: flex; gap: 8px; justify-content: flex-end; }
-        .btn-small { padding: 6px 10px; border: none; border-radius: 4px; font-size: 12px; font-weight: bold; cursor: pointer; color: white; }
+        .btn-small { padding: 6px 12px; border: none; border-radius: 4px; font-size: 12px; font-weight: bold; cursor: pointer; color: white; }
         .btn-fill { background-color: var(--success); }
         .btn-fill:hover { background-color: #059669; }
         .btn-delete { background-color: var(--danger); }
@@ -55,7 +55,17 @@
 
     <div class="container">
         
-        <!-- SINGLE SHIFT ADD -->
+        <!-- 1. BULK IMPORT (TOP) -->
+        <div class="admin-section" style="border-top-color: var(--warning);">
+            <h2 style="color: #d97706;">⚡ Mass / Bulk Import Shifts</h2>
+            <p style="font-size:13px; color:#666; margin-top:-5px;">Paste your formatted JSON block here to import multiple shifts at once.</p>
+            <div class="form-group">
+                <textarea id="bulk-json" rows="6" placeholder='[ { "site": "The Forge Security", "date": "Mon 17 Aug 2026", "time": "21:00 - 05:00", "hours": "8 Hours", "urgency": "Standard" } ]'></textarea>
+            </div>
+            <button class="btn btn-bulk" onclick="bulkImport()">Upload Bulk Shifts</button>
+        </div>
+
+        <!-- 2. POST SINGLE SHIFT (MIDDLE) -->
         <div class="admin-section">
             <h2>Post Single Open Shift</h2>
             <form id="add-shift-form" onsubmit="addSingleShift(event)">
@@ -63,49 +73,38 @@
                     <label>Site Name</label>
                     <input type="text" id="site" required placeholder="e.g. Mint Urban Infinity">
                 </div>
+                
                 <div style="display: flex; gap: 10px;">
                     <div class="form-group" style="flex: 1;">
-                        <label>Date Display</label>
-                        <input type="text" id="dateDisplay" required placeholder="e.g. Mon 17 Aug 2026">
+                        <label>Shift Date</label>
+                        <input type="date" id="shiftDate" required>
                     </div>
                     <div class="form-group" style="flex: 1;">
-                        <label>Start Date/Time (For Auto-Sorting)</label>
-                        <input type="datetime-local" id="startIso" required>
-                    </div>
-                </div>
-                <div style="display: flex; gap: 10px;">
-                    <div class="form-group" style="flex: 1;">
-                        <label>Time Display</label>
+                        <label>Shift Time</label>
                         <input type="text" id="timeDisplay" required placeholder="e.g. 21:00 - 05:00">
                     </div>
+                </div>
+
+                <div style="display: flex; gap: 10px;">
                     <div class="form-group" style="flex: 1;">
                         <label>Total Hours</label>
                         <input type="text" id="hours" required placeholder="e.g. 8 Hours">
                     </div>
+                    <div class="form-group" style="flex: 1;">
+                        <label>Urgency / Status</label>
+                        <select id="urgency" required>
+                            <option value="Standard">Standard</option>
+                            <option value="Emergency">Emergency</option>
+                            <option value="Call-Off">Call-Off</option>
+                        </select>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label>Urgency / Status</label>
-                    <select id="urgency" required>
-                        <option value="Standard">Standard</option>
-                        <option value="Emergency">Emergency</option>
-                        <option value="Call-Off">Call-Off</option>
-                    </select>
-                </div>
-                <button type="submit" class="btn btn-submit">Post Shift to Live Board</button>
+
+                <button type="submit" class="btn btn-submit">+ Post Shift to Live Board</button>
             </form>
         </div>
 
-        <!-- BULK IMPORT -->
-        <div class="admin-section" style="border-top-color: var(--warning);">
-            <h2>Mass / Bulk Import Shifts</h2>
-            <p style="font-size:12px; color:#666; margin-top:-5px;">Paste your formatted JSON block here to import multiple shifts at once.</p>
-            <div class="form-group">
-                <textarea id="bulk-json" rows="6" placeholder='[ { "site": "The Forge", "date": "Mon 17 Aug 2026", ... } ]'></textarea>
-            </div>
-            <button class="btn btn-bulk" onclick="bulkImport()">Upload Bulk Shifts</button>
-        </div>
-
-        <!-- LIVE SHIFT MANAGEMENT -->
+        <!-- 3. LIVE SHIFT MANAGEMENT (BOTTOM) -->
         <div class="admin-section">
             <h2>Live Active Shifts</h2>
             <div id="admin-feed">
@@ -128,27 +127,9 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
-        // Add Single Shift
-        async function addSingleShift(e) {
-            e.preventDefault();
-            const shiftData = {
-                site: document.getElementById('site').value,
-                dateDisplay: document.getElementById('dateDisplay').value,
-                timeDisplay: document.getElementById('timeDisplay').value,
-                hours: document.getElementById('hours').value,
-                urgency: document.getElementById('urgency').value,
-                startIso: new Date(document.getElementById('startIso').value).toISOString(),
-                createdAt: firebase.firestore.FieldValue.serverTimestamp()
-            };
-
-            await db.collection("shifts").add(shiftData);
-            alert("Shift successfully posted!");
-            document.getElementById('add-shift-form').reset();
-        }
-
-        // Bulk Import JSON
+        // 1. Bulk Import Function
         async function bulkImport() {
-            const jsonText = document.getElementById('bulk-json').value;
+            const jsonText = document.getElementById('bulk-json').value.trim();
             if(!jsonText) return alert("Please paste the JSON block first.");
             
             try {
@@ -156,9 +137,8 @@
                 let count = 0;
                 
                 for (const s of shifts) {
-                    // Extract start time to create ISO sorting string
                     const startTimeStr = s.time.split('-')[0].trim();
-                    const dateParts = s.date.split(' '); // e.g., "Mon 17 Aug 2026"
+                    const dateParts = s.date.split(' '); // "Mon 17 Aug 2026"
                     const dateOnly = `${dateParts[1]} ${dateParts[2]} ${dateParts[3]}`;
                     const startIso = new Date(`${dateOnly} ${startTimeStr}`).toISOString();
 
@@ -176,21 +156,55 @@
                 alert(`Successfully imported ${count} shifts!`);
                 document.getElementById('bulk-json').value = '';
             } catch (error) {
-                alert("Error importing shifts. Please ensure the JSON is formatted exactly as provided.\n" + error.message);
+                alert("Error importing shifts. Please check the JSON formatting.\n" + error.message);
             }
         }
 
-        // Manage Existing Shifts
+        // 2. Simple Single Shift Add Function (Auto-formats date & ISO in background)
+        async function addSingleShift(e) {
+            e.preventDefault();
+            
+            const rawDate = document.getElementById('shiftDate').value; // "2026-08-17"
+            const [year, month, day] = rawDate.split('-');
+            const dateObj = new Date(year, month - 1, day);
+
+            // Format date display (e.g. "Mon 17 Aug 2026")
+            const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            const dateDisplay = `${days[dateObj.getDay()]} ${parseInt(day, 10)} ${months[dateObj.getMonth()]} ${year}`;
+
+            // Create ISO string from start time for automatic sorting
+            const timeDisplay = document.getElementById('timeDisplay').value;
+            const startTime = timeDisplay.split('-')[0].trim();
+            const startIso = new Date(`${day} ${months[dateObj.getMonth()]} ${year} ${startTime}`).toISOString();
+
+            const shiftData = {
+                site: document.getElementById('site').value,
+                dateDisplay: dateDisplay,
+                timeDisplay: timeDisplay,
+                hours: document.getElementById('hours').value,
+                urgency: document.getElementById('urgency').value,
+                startIso: startIso,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            };
+
+            await db.collection("shifts").add(shiftData);
+            alert("Shift successfully posted to the live board!");
+            document.getElementById('add-shift-form').reset();
+        }
+
+        // 3. Live Shifts Listener
         db.collection("shifts").orderBy("startIso", "asc").onSnapshot((snapshot) => {
             const feed = document.getElementById('admin-feed');
             feed.innerHTML = '';
             const now = new Date();
+            let count = 0;
 
             snapshot.forEach((doc) => {
                 const shift = doc.data();
-                // Hide past shifts from admin view too, just to keep it clean
                 if (new Date(shift.startIso) <= now) return;
 
+                count++;
                 const isFilled = shift.urgency === "Filled";
                 const bgStyle = isFilled ? "background-color: #f9fafb; opacity: 0.7;" : "";
 
@@ -198,7 +212,7 @@
                     <div class="shift-item" style="${bgStyle}">
                         <div class="shift-info">
                             <h4>${shift.site}</h4>
-                            <p>${shift.dateDisplay} | ${shift.timeDisplay} | Status: <strong>${shift.urgency}</strong></p>
+                            <p>${shift.dateDisplay} | ${shift.timeDisplay} (${shift.hours}) | Status: <strong>${shift.urgency}</strong></p>
                         </div>
                         <div class="shift-actions">
                             ${!isFilled ? `<button class="btn-small btn-fill" onclick="markFilled('${doc.id}')">Mark Filled</button>` : ''}
@@ -207,6 +221,10 @@
                     </div>
                 `;
             });
+
+            if (count === 0) {
+                feed.innerHTML = '<p style="text-align:center; color:#666;">No active shifts currently on the board.</p>';
+            }
         });
 
         async function markFilled(id) {
