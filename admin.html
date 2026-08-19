@@ -22,6 +22,12 @@
         .admin-section { background: var(--card-bg); border-radius: 8px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); border-top: 4px solid var(--oculus-blue); }
         .admin-section h2 { margin-top: 0; font-size: 18px; color: var(--oculus-blue); border-bottom: 1px solid #e5e7eb; padding-bottom: 10px; }
         
+        /* New Feed Header for Toggle */
+        .feed-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e5e7eb; padding-bottom: 10px; margin-bottom: 15px; }
+        .feed-header h2 { margin: 0; border: none; padding: 0; font-size: 18px; color: var(--oculus-blue); }
+        .toggle-label { font-size: 13px; font-weight: bold; color: var(--gray); cursor: pointer; display: flex; align-items: center; gap: 5px; }
+        .toggle-label input { cursor: pointer; }
+
         .form-group { margin-bottom: 15px; }
         .form-group label { display: block; font-size: 13px; font-weight: bold; color: #555; margin-bottom: 5px; }
         .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; font-size: 14px; }
@@ -107,7 +113,12 @@
 
         <!-- 3. LIVE SHIFT MANAGEMENT (BOTTOM) -->
         <div class="admin-section">
-            <h2>Live Active Shifts</h2>
+            <div class="feed-header">
+                <h2>Live Active Shifts</h2>
+                <label class="toggle-label">
+                    <input type="checkbox" id="hide-filled-checkbox" onchange="applyFilledToggle()"> Hide Filled Shifts
+                </label>
+            </div>
             <div id="admin-feed">
                 <p style="text-align:center; color:#666;">Loading shifts...</p>
             </div>
@@ -140,6 +151,14 @@
 
             const totalHours = diffMinutes / 60;
             return `${Number(totalHours.toFixed(2))} Hours`;
+        }
+
+        // Toggle visibility of filled shifts
+        function applyFilledToggle() {
+            const isHidden = document.getElementById('hide-filled-checkbox').checked;
+            document.querySelectorAll('.filled-shift').forEach(shift => {
+                shift.style.display = isHidden ? 'none' : '';
+            });
         }
 
         // 1. Bulk Import Function
@@ -217,6 +236,7 @@
             feed.innerHTML = '';
             const now = new Date();
             let count = 0;
+            const isHidden = document.getElementById('hide-filled-checkbox').checked;
 
             snapshot.forEach((doc) => {
                 const shift = doc.data();
@@ -224,7 +244,13 @@
 
                 count++;
                 const isFilled = shift.urgency === "Filled";
-                const bgStyle = isFilled ? "background-color: #f9fafb; opacity: 0.7;" : "";
+                
+                // Add specific logic for rendering based on the toggle checkbox
+                let styleAttr = isFilled ? "background-color: #f9fafb; opacity: 0.7;" : "";
+                if (isFilled && isHidden) {
+                    styleAttr += " display: none;";
+                }
+                const filledClass = isFilled ? "filled-shift" : "";
 
                 // Swap buttons based on Filled status
                 const actionButton = isFilled 
@@ -232,7 +258,7 @@
                     : `<button class="btn-small btn-fill" onclick="markFilled('${doc.id}')">Mark Filled</button>`;
 
                 feed.innerHTML += `
-                    <div class="shift-item" style="${bgStyle}">
+                    <div class="shift-item ${filledClass}" style="${styleAttr}">
                         <div class="shift-info">
                             <h4>${shift.site}</h4>
                             <p>${shift.dateDisplay} | ${shift.timeDisplay} (${shift.hours}) | Status: <strong>${shift.urgency}</strong></p>
@@ -256,7 +282,6 @@
             }
         }
 
-        // NEW: Reopen Shift Function
         async function reopenShift(id) {
             if(confirm("Reopen this shift? It will instantly reappear on the live board as 'Standard'.")) {
                 await db.collection("shifts").doc(id).update({ urgency: "Standard" });
