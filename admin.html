@@ -42,6 +42,8 @@
         .btn-small { padding: 6px 12px; border: none; border-radius: 4px; font-size: 12px; font-weight: bold; cursor: pointer; color: white; }
         .btn-fill { background-color: var(--success); }
         .btn-fill:hover { background-color: #059669; }
+        .btn-reopen { background-color: var(--oculus-blue); }
+        .btn-reopen:hover { background-color: #172554; }
         .btn-delete { background-color: var(--danger); }
         .btn-delete:hover { background-color: #dc2626; }
     </style>
@@ -224,6 +226,11 @@
                 const isFilled = shift.urgency === "Filled";
                 const bgStyle = isFilled ? "background-color: #f9fafb; opacity: 0.7;" : "";
 
+                // Swap buttons based on Filled status
+                const actionButton = isFilled 
+                    ? `<button class="btn-small btn-reopen" onclick="reopenShift('${doc.id}')">Reopen</button>`
+                    : `<button class="btn-small btn-fill" onclick="markFilled('${doc.id}')">Mark Filled</button>`;
+
                 feed.innerHTML += `
                     <div class="shift-item" style="${bgStyle}">
                         <div class="shift-info">
@@ -231,7 +238,7 @@
                             <p>${shift.dateDisplay} | ${shift.timeDisplay} (${shift.hours}) | Status: <strong>${shift.urgency}</strong></p>
                         </div>
                         <div class="shift-actions">
-                            ${!isFilled ? `<button class="btn-small btn-fill" onclick="markFilled('${doc.id}')">Mark Filled</button>` : ''}
+                            ${actionButton}
                             <button class="btn-small btn-delete" onclick="deleteShift('${doc.id}')">Delete</button>
                         </div>
                     </div>
@@ -246,6 +253,13 @@
         async function markFilled(id) {
             if(confirm("Mark this shift as filled? It will grey out on the guard board.")) {
                 await db.collection("shifts").doc(id).update({ urgency: "Filled" });
+            }
+        }
+
+        // NEW: Reopen Shift Function
+        async function reopenShift(id) {
+            if(confirm("Reopen this shift? It will instantly reappear on the live board as 'Standard'.")) {
+                await db.collection("shifts").doc(id).update({ urgency: "Standard" });
             }
         }
 
