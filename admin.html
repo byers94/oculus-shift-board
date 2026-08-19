@@ -25,6 +25,7 @@
         .form-group { margin-bottom: 15px; }
         .form-group label { display: block; font-size: 13px; font-weight: bold; color: #555; margin-bottom: 5px; }
         .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; font-size: 14px; }
+        .form-group input[readonly] { background-color: #f8fafc; color: #334155; font-weight: 600; cursor: not-allowed; }
         
         .btn { padding: 12px 15px; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; color: white; display: inline-block; width: 100%; text-align: center; font-size: 15px; }
         .btn-bulk { background-color: var(--warning); color: #fff; }
@@ -74,21 +75,78 @@
                     <input type="text" id="site" required placeholder="e.g. Mint Urban Infinity">
                 </div>
                 
+                <div class="form-group">
+                    <label>Shift Date</label>
+                    <input type="date" id="shiftDate" required>
+                </div>
+
                 <div style="display: flex; gap: 10px;">
                     <div class="form-group" style="flex: 1;">
-                        <label>Shift Date</label>
-                        <input type="date" id="shiftDate" required>
+                        <label>Start Time</label>
+                        <select id="startTime" required onchange="calculateHours()">
+                            <option value="" disabled selected>Select Start...</option>
+                            <option value="00:00">00:00 (12:00 AM)</option>
+                            <option value="01:00">01:00 (1:00 AM)</option>
+                            <option value="02:00">02:00 (2:00 AM)</option>
+                            <option value="03:00">03:00 (3:00 AM)</option>
+                            <option value="04:00">04:00 (4:00 AM)</option>
+                            <option value="05:00">05:00 (5:00 AM)</option>
+                            <option value="06:00">06:00 (6:00 AM)</option>
+                            <option value="07:00">07:00 (7:00 AM)</option>
+                            <option value="08:00">08:00 (8:00 AM)</option>
+                            <option value="09:00">09:00 (9:00 AM)</option>
+                            <option value="10:00">10:00 (10:00 AM)</option>
+                            <option value="11:00">11:00 (11:00 AM)</option>
+                            <option value="12:00">12:00 (12:00 PM)</option>
+                            <option value="13:00">13:00 (1:00 PM)</option>
+                            <option value="14:00">14:00 (2:00 PM)</option>
+                            <option value="15:00">15:00 (3:00 PM)</option>
+                            <option value="16:00">16:00 (4:00 PM)</option>
+                            <option value="17:00">17:00 (5:00 PM)</option>
+                            <option value="18:00">18:00 (6:00 PM)</option>
+                            <option value="19:00">19:00 (7:00 PM)</option>
+                            <option value="20:00">20:00 (8:00 PM)</option>
+                            <option value="21:00">21:00 (9:00 PM)</option>
+                            <option value="22:00">22:00 (10:00 PM)</option>
+                            <option value="23:00">23:00 (11:00 PM)</option>
+                        </select>
                     </div>
                     <div class="form-group" style="flex: 1;">
-                        <label>Shift Time</label>
-                        <input type="text" id="timeDisplay" required placeholder="e.g. 21:00 - 05:00">
+                        <label>End Time</label>
+                        <select id="endTime" required onchange="calculateHours()">
+                            <option value="" disabled selected>Select End...</option>
+                            <option value="00:00">00:00 (12:00 AM)</option>
+                            <option value="01:00">01:00 (1:00 AM)</option>
+                            <option value="02:00">02:00 (2:00 AM)</option>
+                            <option value="03:00">03:00 (3:00 AM)</option>
+                            <option value="04:00">04:00 (4:00 AM)</option>
+                            <option value="05:00">05:00 (5:00 AM)</option>
+                            <option value="06:00">06:00 (6:00 AM)</option>
+                            <option value="07:00">07:00 (7:00 AM)</option>
+                            <option value="08:00">08:00 (8:00 AM)</option>
+                            <option value="09:00">09:00 (9:00 AM)</option>
+                            <option value="10:00">10:00 (10:00 AM)</option>
+                            <option value="11:00">11:00 (11:00 AM)</option>
+                            <option value="12:00">12:00 (12:00 PM)</option>
+                            <option value="13:00">13:00 (1:00 PM)</option>
+                            <option value="14:00">14:00 (2:00 PM)</option>
+                            <option value="15:00">15:00 (3:00 PM)</option>
+                            <option value="16:00">16:00 (4:00 PM)</option>
+                            <option value="17:00">17:00 (5:00 PM)</option>
+                            <option value="18:00">18:00 (6:00 PM)</option>
+                            <option value="19:00">19:00 (7:00 PM)</option>
+                            <option value="20:00">20:00 (8:00 PM)</option>
+                            <option value="21:00">21:00 (9:00 PM)</option>
+                            <option value="22:00">22:00 (10:00 PM)</option>
+                            <option value="23:00">23:00 (11:00 PM)</option>
+                        </select>
                     </div>
                 </div>
 
                 <div style="display: flex; gap: 10px;">
                     <div class="form-group" style="flex: 1;">
-                        <label>Total Hours</label>
-                        <input type="text" id="hours" required placeholder="e.g. 8 Hours">
+                        <label>Total Hours (Auto-Calculated)</label>
+                        <input type="text" id="hours" readonly placeholder="Select times above...">
                     </div>
                     <div class="form-group" style="flex: 1;">
                         <label>Urgency / Status</label>
@@ -127,6 +185,26 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
+        // Auto-Calculate Total Hours (handles overnight math)
+        function calculateHours() {
+            const start = document.getElementById('startTime').value;
+            const end = document.getElementById('endTime').value;
+            
+            if (!start || !end) return;
+
+            const [startH, startM] = start.split(':').map(Number);
+            const [endH, endM] = end.split(':').map(Number);
+
+            let diffMinutes = (endH * 60 + endM) - (startH * 60 + startM);
+            if (diffMinutes <= 0) {
+                // Overnight shift calculation
+                diffMinutes += 24 * 60;
+            }
+
+            const totalHours = diffMinutes / 60;
+            document.getElementById('hours').value = `${totalHours} Hours`;
+        }
+
         // 1. Bulk Import Function
         async function bulkImport() {
             const jsonText = document.getElementById('bulk-json').value.trim();
@@ -160,7 +238,7 @@
             }
         }
 
-        // 2. Simple Single Shift Add Function (Auto-formats date & ISO in background)
+        // 2. Single Shift Add Function
         async function addSingleShift(e) {
             e.preventDefault();
             
@@ -173,9 +251,11 @@
             const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
             const dateDisplay = `${days[dateObj.getDay()]} ${parseInt(day, 10)} ${months[dateObj.getMonth()]} ${year}`;
 
-            // Create ISO string from start time for automatic sorting
-            const timeDisplay = document.getElementById('timeDisplay').value;
-            const startTime = timeDisplay.split('-')[0].trim();
+            const startTime = document.getElementById('startTime').value;
+            const endTime = document.getElementById('endTime').value;
+            const timeDisplay = `${startTime} - ${endTime}`;
+
+            // Create ISO string for chronological feed sorting
             const startIso = new Date(`${day} ${months[dateObj.getMonth()]} ${year} ${startTime}`).toISOString();
 
             const shiftData = {
@@ -191,6 +271,7 @@
             await db.collection("shifts").add(shiftData);
             alert("Shift successfully posted to the live board!");
             document.getElementById('add-shift-form').reset();
+            document.getElementById('hours').value = '';
         }
 
         // 3. Live Shifts Listener
