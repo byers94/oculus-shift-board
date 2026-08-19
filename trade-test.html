@@ -79,6 +79,10 @@
         .modal-actions { display: flex; gap: 10px; margin-top: 20px; }
         .btn-cancel { background: #f1f5f9; color: #333; border: 1px solid #ccc; padding: 10px; border-radius: 5px; flex: 1; cursor: pointer; font-weight: bold; }
         .btn-submit { background: var(--success); color: white; border: none; padding: 10px; border-radius: 5px; flex: 2; cursor: pointer; font-weight: bold; }
+        
+        /* Dynamic Input Style */
+        .dynamic-field { display: none; background: #e0f2fe; padding: 12px; border-radius: 6px; border: 1px solid #bae6fd; margin-bottom: 15px; }
+        .dynamic-field label { color: #0369a1; }
     </style>
     <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
@@ -152,12 +156,18 @@
 
                 <div class="form-group">
                     <label>Dates You Can Work Instead (Availability Window)</label>
-                    <select id="post-availability" required>
+                    <select id="post-availability" required onchange="toggleSpecificDetails()">
                         <option value="" disabled selected>Select Availability...</option>
                         <option value="Any day same week">Any day same week</option>
-                        <option value="Specific Date Only (Will finalize with Ops)">Specific Date Only (Will finalize with Ops)</option>
+                        <option value="Specific Dates/Times">Specific Dates & Times (Enter below)</option>
                         <option value="Just need off (No Swap)">Just need off (No Swap Available)</option>
                     </select>
+                </div>
+
+                <!-- Hidden Input that appears only for specific dates -->
+                <div class="dynamic-field" id="specific-details-group">
+                    <label>Enter Available Days & Shifts (AM / PM / Overnight)</label>
+                    <input type="text" id="post-specific-details" placeholder="e.g. Tue/Wed AM only, or Thu Overnight">
                 </div>
 
                 <div class="modal-actions">
@@ -280,14 +290,37 @@
         }
 
         function openPostModal() { document.getElementById('post-modal').style.display = 'flex'; }
+        
         function closeModals() {
             document.getElementById('post-modal').style.display = 'none';
             document.getElementById('offer-modal').style.display = 'none';
             document.getElementById('claim-modal').style.display = 'none';
+            
+            // Reset forms and dynamic fields
             document.getElementById('post-trade-form').reset();
             document.getElementById('offer-swap-form').reset();
             document.getElementById('claim-shift-form').reset();
+            
+            document.getElementById('specific-details-group').style.display = 'none';
+            document.getElementById('post-specific-details').required = false;
         }
+
+        // Toggle the specific dates text box
+        function toggleSpecificDetails() {
+            const availSelect = document.getElementById('post-availability').value;
+            const detailsGroup = document.getElementById('specific-details-group');
+            const detailsInput = document.getElementById('post-specific-details');
+
+            if (availSelect === 'Specific Dates/Times') {
+                detailsGroup.style.display = 'block';
+                detailsInput.required = true;
+            } else {
+                detailsGroup.style.display = 'none';
+                detailsInput.required = false;
+                detailsInput.value = '';
+            }
+        }
+
         function openOfferModal(tradeId) {
             document.getElementById('target-trade-id').value = tradeId;
             document.getElementById('offer-modal').style.display = 'flex';
@@ -301,13 +334,19 @@
             e.preventDefault();
             const dateStr = document.getElementById('post-date').value;
             
+            // Determine final availability text based on dropdown and input
+            let availabilityText = document.getElementById('post-availability').value;
+            if (availabilityText === 'Specific Dates/Times') {
+                availabilityText = `Specific: ${document.getElementById('post-specific-details').value}`;
+            }
+            
             const tradeData = {
                 guardAName: document.getElementById('post-name').value,
                 siteA: document.getElementById('post-site').value,
                 dateA: formatDateStr(dateStr),
                 dateA_Raw: dateStr,
                 timeA: document.getElementById('post-time').value,
-                availability: document.getElementById('post-availability').value,
+                availability: availabilityText,
                 status: "Pending Post Approval",
                 createdAt: firebase.firestore.FieldValue.serverTimestamp() // Timestamp 1: Initial Request
             };
