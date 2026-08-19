@@ -75,14 +75,18 @@
         .modal-content h2 { margin-top: 0; font-size: 18px; color: var(--oculus-blue); border-bottom: 2px solid #eee; padding-bottom: 10px; }
         .form-group { margin-bottom: 15px; }
         .form-group label { display: block; font-size: 13px; font-weight: bold; color: #555; margin-bottom: 5px; }
-        .form-group input, .form-group select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; font-size: 14px; }
+        .form-group input:not([type="checkbox"]), .form-group select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; font-size: 14px; }
         .modal-actions { display: flex; gap: 10px; margin-top: 20px; }
         .btn-cancel { background: #f1f5f9; color: #333; border: 1px solid #ccc; padding: 10px; border-radius: 5px; flex: 1; cursor: pointer; font-weight: bold; }
         .btn-submit { background: var(--success); color: white; border: none; padding: 10px; border-radius: 5px; flex: 2; cursor: pointer; font-weight: bold; }
         
-        /* Dynamic Input Style */
+        /* Checkbox Group Styles */
         .dynamic-field { display: none; background: #e0f2fe; padding: 12px; border-radius: 6px; border: 1px solid #bae6fd; margin-bottom: 15px; }
-        .dynamic-field label { color: #0369a1; }
+        .dynamic-field label.group-title { color: #0369a1; font-size: 13px; font-weight: bold; margin-bottom: 8px; display: block; border-bottom: 1px solid #bae6fd; padding-bottom: 4px; }
+        .checkbox-container { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+        .checkbox-label { display: flex; align-items: center; font-size: 13px; color: #333; cursor: pointer; background: white; padding: 6px 10px; border-radius: 4px; border: 1px solid #ccc; }
+        .checkbox-label:hover { background: #f8fafc; }
+        .checkbox-label input[type="checkbox"] { margin: 0 6px 0 0; cursor: pointer; width: auto; }
     </style>
     <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
@@ -159,15 +163,30 @@
                     <select id="post-availability" required onchange="toggleSpecificDetails()">
                         <option value="" disabled selected>Select Availability...</option>
                         <option value="Any day same week">Any day same week</option>
-                        <option value="Specific Dates/Times">Specific Dates & Times (Enter below)</option>
+                        <option value="Specific Dates/Times">Specific Dates & Times (Select below)</option>
                         <option value="Just need off (No Swap)">Just need off (No Swap Available)</option>
                     </select>
                 </div>
 
                 <!-- Hidden Input that appears only for specific dates -->
                 <div class="dynamic-field" id="specific-details-group">
-                    <label>Enter Available Days & Shifts (AM / PM / Overnight)</label>
-                    <input type="text" id="post-specific-details" placeholder="e.g. Tue/Wed AM only, or Thu Overnight">
+                    <label class="group-title">Days Available</label>
+                    <div class="checkbox-container">
+                        <label class="checkbox-label"><input type="checkbox" name="avail-day" value="Mon"> Mon</label>
+                        <label class="checkbox-label"><input type="checkbox" name="avail-day" value="Tue"> Tue</label>
+                        <label class="checkbox-label"><input type="checkbox" name="avail-day" value="Wed"> Wed</label>
+                        <label class="checkbox-label"><input type="checkbox" name="avail-day" value="Thu"> Thu</label>
+                        <label class="checkbox-label"><input type="checkbox" name="avail-day" value="Fri"> Fri</label>
+                        <label class="checkbox-label"><input type="checkbox" name="avail-day" value="Sat"> Sat</label>
+                        <label class="checkbox-label"><input type="checkbox" name="avail-day" value="Sun"> Sun</label>
+                    </div>
+
+                    <label class="group-title" style="margin-top: 15px;">Shift Types Available</label>
+                    <div class="checkbox-container">
+                        <label class="checkbox-label"><input type="checkbox" name="avail-shift" value="AM"> AM Shifts</label>
+                        <label class="checkbox-label"><input type="checkbox" name="avail-shift" value="PM"> PM Shifts</label>
+                        <label class="checkbox-label"><input type="checkbox" name="avail-shift" value="Overnight"> Overnight</label>
+                    </div>
                 </div>
 
                 <div class="modal-actions">
@@ -296,28 +315,25 @@
             document.getElementById('offer-modal').style.display = 'none';
             document.getElementById('claim-modal').style.display = 'none';
             
-            // Reset forms and dynamic fields
+            // Reset forms
             document.getElementById('post-trade-form').reset();
             document.getElementById('offer-swap-form').reset();
             document.getElementById('claim-shift-form').reset();
             
+            // Reset dynamic checkbox area
             document.getElementById('specific-details-group').style.display = 'none';
-            document.getElementById('post-specific-details').required = false;
+            document.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
         }
 
-        // Toggle the specific dates text box
         function toggleSpecificDetails() {
             const availSelect = document.getElementById('post-availability').value;
             const detailsGroup = document.getElementById('specific-details-group');
-            const detailsInput = document.getElementById('post-specific-details');
 
             if (availSelect === 'Specific Dates/Times') {
                 detailsGroup.style.display = 'block';
-                detailsInput.required = true;
             } else {
                 detailsGroup.style.display = 'none';
-                detailsInput.required = false;
-                detailsInput.value = '';
+                document.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
             }
         }
 
@@ -334,10 +350,24 @@
             e.preventDefault();
             const dateStr = document.getElementById('post-date').value;
             
-            // Determine final availability text based on dropdown and input
             let availabilityText = document.getElementById('post-availability').value;
+            
+            // Compile Checkbox Data
             if (availabilityText === 'Specific Dates/Times') {
-                availabilityText = `Specific: ${document.getElementById('post-specific-details').value}`;
+                const checkedDays = Array.from(document.querySelectorAll('input[name="avail-day"]:checked')).map(cb => cb.value);
+                const checkedShifts = Array.from(document.querySelectorAll('input[name="avail-shift"]:checked')).map(cb => cb.value);
+                
+                let details = [];
+                if (checkedDays.length > 0) details.push(checkedDays.join(', '));
+                if (checkedShifts.length > 0) details.push(checkedShifts.join(', '));
+                
+                // Safety Catch: Prevent empty submission
+                if (details.length === 0) {
+                    alert("Please select at least one Day or Shift type, or change your availability window.");
+                    return; 
+                }
+                
+                availabilityText = `Specific: ${details.join(' | ')}`;
             }
             
             const tradeData = {
@@ -348,7 +378,7 @@
                 timeA: document.getElementById('post-time').value,
                 availability: availabilityText,
                 status: "Pending Post Approval",
-                createdAt: firebase.firestore.FieldValue.serverTimestamp() // Timestamp 1: Initial Request
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
             };
 
             await db.collection("trades").add(tradeData);
@@ -368,7 +398,7 @@
                 timeB: document.getElementById('offer-time').value,
                 trainingNeeded: document.getElementById('offer-training').value,
                 status: "Pending Ops Approval",
-                offeredAt: firebase.firestore.FieldValue.serverTimestamp() // Timestamp 2: Guard B Bids
+                offeredAt: firebase.firestore.FieldValue.serverTimestamp() 
             };
 
             await db.collection("trades").doc(tradeId).update(offerData);
@@ -387,7 +417,7 @@
                 timeB: "N/A",
                 trainingNeeded: document.getElementById('claim-training').value,
                 status: "Pending Ops Approval",
-                offeredAt: firebase.firestore.FieldValue.serverTimestamp() // Timestamp 2: Guard B Bids
+                offeredAt: firebase.firestore.FieldValue.serverTimestamp() 
             };
 
             await db.collection("trades").doc(tradeId).update(claimData);
