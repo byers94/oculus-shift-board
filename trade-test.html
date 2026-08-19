@@ -228,10 +228,10 @@
         </div>
     </div>
 
-    <!-- MODAL 3: Claim a Giveaway (No Swap) -->
+    <!-- MODAL 3: Request a Giveaway (No Swap) -->
     <div class="modal-overlay" id="claim-modal">
         <div class="modal-content">
-            <h2>Claim Shift</h2>
+            <h2>Request Shift</h2>
             <p style="font-size:12px; color:#666; margin-top:-10px;">Enter your name to request this shift. Ops will review and assign it if approved.</p>
             
             <form id="claim-shift-form" onsubmit="submitClaim(event)">
@@ -252,7 +252,7 @@
 
                 <div class="modal-actions">
                     <button type="button" class="btn-cancel" onclick="closeModals()">Cancel</button>
-                    <button type="submit" class="btn-submit" style="background-color: var(--oculus-blue);">Claim Shift</button>
+                    <button type="submit" class="btn-submit" style="background-color: var(--oculus-blue);">Request Shift</button>
                 </div>
             </form>
         </div>
@@ -352,7 +352,7 @@
             };
 
             await db.collection("trades").doc(tradeId).update(claimData);
-            alert("Shift claimed! Sent to Ops for approval.");
+            alert("Shift requested! Sent to Ops for approval.");
             closeModals();
         }
 
@@ -377,7 +377,7 @@
                 const badgeText = isGiveaway ? "Giveaway" : "Seeking Swap";
                 const badgeColor = isGiveaway ? "var(--success)" : "var(--warning)";
                 const buttonHtml = isGiveaway 
-                    ? `<button class="btn-offer" style="background-color: var(--oculus-blue);" onclick="openClaimModal('${doc.id}')">Claim Shift (No Swap)</button>`
+                    ? `<button class="btn-offer" style="background-color: var(--oculus-blue);" onclick="openClaimModal('${doc.id}')">Request Shift (No Swap)</button>`
                     : `<button class="btn-offer" onclick="openOfferModal('${doc.id}')">Propose Shift Swap</button>`;
                 
                 feed.innerHTML += `
