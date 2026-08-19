@@ -60,6 +60,10 @@
         .badge-history.approved { background: #dcfce3; color: #166534; }
         .badge-history.denied { background: #fee2e2; color: #dc2626; }
         .deny-reason { font-size: 12px; color: var(--danger); margin-top: 5px; max-width: 200px; }
+        
+        /* Timestamp Styles */
+        .timestamp-log { font-size: 11px; color: #888; margin-top: 8px; padding-top: 8px; border-top: 1px dashed #e5e7eb; }
+        .timestamp-log strong { color: #555; }
     </style>
     <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
@@ -102,6 +106,14 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
+        // Helper function to format Firebase Timestamps into readable text (e.g. "Aug 18, 14:30")
+        function formatTime(ts) {
+            if (!ts || !ts.toDate) return "Pending...";
+            const d = ts.toDate();
+            return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + " " + 
+                   d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+        }
+
         db.collection("trades").onSnapshot((snapshot) => {
             let trades = [];
             snapshot.forEach(doc => { trades.push({ id: doc.id, ...doc.data() }); });
@@ -124,7 +136,12 @@
             let postCount = 0, swapCount = 0, historyCount = 0;
 
             trades.forEach((tr) => {
-                // 1. Pending Posts (Guard A wants to list)
+                // Formatting the Timestamps
+                const createdStr = formatTime(tr.createdAt);
+                const offeredStr = tr.offeredAt ? formatTime(tr.offeredAt) : null;
+                const resolvedStr = tr.resolvedAt ? formatTime(tr.resolvedAt) : null;
+
+                // 1. Pending Posts
                 if (tr.status === "Pending Post Approval") {
                     postCount++;
                     postsFeed.innerHTML += `
@@ -141,6 +158,7 @@
                                     <div class="swap-detail"><strong>Willing to work:</strong> <span style="color:var(--oculus-blue);">${tr.availability}</span></div>
                                 </div>
                             </div>
+                            <div style="font-size:12px; color:#666; margin-bottom:10px;"><strong>Requested:</strong> ${createdStr}</div>
                             <div class="action-buttons">
                                 <button class="btn btn-deny" onclick="denyPost('${tr.id}')">Deny Posting</button>
                                 <button class="btn btn-approve" onclick="approvePost('${tr.id}')">Approve & Push to Board</button>
@@ -148,7 +166,7 @@
                         </div>
                     `;
                 } 
-                // 2. Pending Swaps (Guard B wants to claim)
+                // 2. Pending Swaps
                 else if (tr.status === "Pending Ops Approval") {
                     swapCount++;
                     swapsFeed.innerHTML += `
@@ -176,6 +194,9 @@
                                     </div>
                                 </div>
                             </div>
+                            <div style="font-size:12px; color:#666; margin-bottom:10px;">
+                                <strong>Original Post:</strong> ${createdStr} | <strong>Bid Placed:</strong> ${offeredStr || 'N/A'}
+                            </div>
                             <div class="action-buttons">
                                 <button class="btn btn-deny" onclick="denySwap('${tr.id}')">Deny Swap</button>
                                 <button class="btn btn-approve" onclick="approveSwap('${tr.id}')">Approve Swap</button>
@@ -183,22 +204,24 @@
                         </div>
                     `;
                 } 
-                // 3. History Log (Clearly logging both names)
+                // 3. History Log with Timestamps
                 else if (tr.status === "Approved - Final" || tr.status === "Swap Denied" || tr.status === "Post Denied") {
                     historyCount++;
                     const isApp = tr.status === "Approved - Final";
                     const statusClass = isApp ? "approved" : "denied";
                     
-                    // Format History Titles to clearly log Guard Names
                     let titleText = "";
                     let detailsText = "";
+                    let timestampHtml = "";
                     
                     if (tr.status === "Post Denied") {
                         titleText = `Record: Officer ${tr.guardAName} (Posting Rejected)`;
                         detailsText = `<strong>Attempted to post:</strong> ${tr.siteA} (${tr.dateA})`;
+                        timestampHtml = `<div class="timestamp-log"><strong>Requested:</strong> ${createdStr} &bull; <strong>Denied:</strong> ${resolvedStr}</div>`;
                     } else {
                         titleText = `Record: Officer ${tr.guardAName} & Officer ${tr.guardBName}`;
                         detailsText = `<strong>A gave:</strong> ${tr.siteA} (${tr.dateA}) | <strong>B gave:</strong> ${tr.siteB} (${tr.dateB})`;
+                        timestampHtml = `<div class="timestamp-log"><strong>Posted:</strong> ${createdStr} &bull; <strong>Bid:</strong> ${offeredStr} &bull; <strong>Ops Action:</strong> ${resolvedStr}</div>`;
                     }
 
                     historyFeed.innerHTML += `
@@ -206,6 +229,7 @@
                             <div class="history-info">
                                 <h4>${titleText}</h4>
                                 <p>${detailsText}</p>
+                                ${timestampHtml}
                             </div>
                             <div class="history-status">
                                 <span class="badge-history ${statusClass}">${tr.status.toUpperCase()}</span>
@@ -223,9 +247,10 @@
 
         // ---------------- ACTION FUNCTIONS ----------------
 
-        // 1. Post Actions
         async function approvePost(id) {
-            await db.collection("trades").doc(id).update({ status: "Open" });
+            await db.collection("trades").doc(id).update({ 
+                status: "Open"
+            });
         }
 
         async function denyPost(id) {
@@ -233,15 +258,18 @@
             if (reason !== null) {
                 await db.collection("trades").doc(id).update({
                     status: "Post Denied",
-                    denyReason: reason
+                    denyReason: reason,
+                    resolvedAt: firebase.firestore.FieldValue.serverTimestamp() // Timestamp 3: Ops Decision
                 });
             }
         }
 
-        // 2. Swap Actions
         async function approveSwap(id) {
             if(confirm("Confirm this swap? Both guards will be officially reassigned.")) {
-                await db.collection("trades").doc(id).update({ status: "Approved - Final" });
+                await db.collection("trades").doc(id).update({ 
+                    status: "Approved - Final",
+                    resolvedAt: firebase.firestore.FieldValue.serverTimestamp() // Timestamp 3: Ops Decision
+                });
             }
         }
 
@@ -254,13 +282,12 @@
                 if(docSnap.exists) {
                     const tr = docSnap.data();
                     
-                    // Mark this specific transaction as Swap Denied for history logging
                     await docRef.update({
                         status: "Swap Denied",
-                        denyReason: reason
+                        denyReason: reason,
+                        resolvedAt: firebase.firestore.FieldValue.serverTimestamp() // Timestamp 3: Ops Decision
                     });
 
-                    // Automatically duplicate Guard A's original shift back to the Open board
                     await db.collection("trades").add({
                         guardAName: tr.guardAName,
                         siteA: tr.siteA,
