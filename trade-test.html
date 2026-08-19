@@ -308,8 +308,8 @@
                 dateA_Raw: dateStr,
                 timeA: document.getElementById('post-time').value,
                 availability: document.getElementById('post-availability').value,
-                status: "Pending Post Approval", // NEW: Requires Ops approval to hit the board
-                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                status: "Pending Post Approval",
+                createdAt: firebase.firestore.FieldValue.serverTimestamp() // Timestamp 1: Initial Request
             };
 
             await db.collection("trades").add(tradeData);
@@ -328,7 +328,8 @@
                 dateB: formatDateStr(dateStr),
                 timeB: document.getElementById('offer-time').value,
                 trainingNeeded: document.getElementById('offer-training').value,
-                status: "Pending Ops Approval"
+                status: "Pending Ops Approval",
+                offeredAt: firebase.firestore.FieldValue.serverTimestamp() // Timestamp 2: Guard B Bids
             };
 
             await db.collection("trades").doc(tradeId).update(offerData);
@@ -346,7 +347,8 @@
                 dateB: "N/A",
                 timeB: "N/A",
                 trainingNeeded: document.getElementById('claim-training').value,
-                status: "Pending Ops Approval"
+                status: "Pending Ops Approval",
+                offeredAt: firebase.firestore.FieldValue.serverTimestamp() // Timestamp 2: Guard B Bids
             };
 
             await db.collection("trades").doc(tradeId).update(claimData);
@@ -354,7 +356,7 @@
             closeModals();
         }
 
-        // Live Feed Listener (Only shows shifts Ops has approved to "Open")
+        // Live Feed Listener 
         db.collection("trades").where("status", "==", "Open").onSnapshot((snapshot) => {
             const feed = document.getElementById('trade-feed');
             feed.innerHTML = '';
