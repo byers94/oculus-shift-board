@@ -25,7 +25,6 @@
         .form-group { margin-bottom: 15px; }
         .form-group label { display: block; font-size: 13px; font-weight: bold; color: #555; margin-bottom: 5px; }
         .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; font-size: 14px; }
-        .form-group input[readonly] { background-color: #f8fafc; color: #334155; font-weight: 600; cursor: not-allowed; }
         
         .btn { padding: 12px 15px; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; color: white; display: inline-block; width: 100%; text-align: center; font-size: 15px; }
         .btn-bulk { background-color: var(--warning); color: #fff; }
@@ -83,7 +82,7 @@
                 <div style="display: flex; gap: 10px;">
                     <div class="form-group" style="flex: 1;">
                         <label>Start Time</label>
-                        <select id="startTime" required onchange="calculateHours()">
+                        <select id="startTime" required>
                             <option value="" disabled selected>Select Start...</option>
                             <option value="00:00">00:00 (12:00 AM)</option>
                             <option value="01:00">01:00 (1:00 AM)</option>
@@ -113,7 +112,7 @@
                     </div>
                     <div class="form-group" style="flex: 1;">
                         <label>End Time</label>
-                        <select id="endTime" required onchange="calculateHours()">
+                        <select id="endTime" required>
                             <option value="" disabled selected>Select End...</option>
                             <option value="00:00">00:00 (12:00 AM)</option>
                             <option value="01:00">01:00 (1:00 AM)</option>
@@ -143,19 +142,13 @@
                     </div>
                 </div>
 
-                <div style="display: flex; gap: 10px;">
-                    <div class="form-group" style="flex: 1;">
-                        <label>Total Hours (Auto-Calculated)</label>
-                        <input type="text" id="hours" readonly placeholder="Select times above...">
-                    </div>
-                    <div class="form-group" style="flex: 1;">
-                        <label>Urgency / Status</label>
-                        <select id="urgency" required>
-                            <option value="Standard">Standard</option>
-                            <option value="Emergency">Emergency</option>
-                            <option value="Call-Off">Call-Off</option>
-                        </select>
-                    </div>
+                <div class="form-group">
+                    <label>Urgency / Status</label>
+                    <select id="urgency" required>
+                        <option value="Standard">Standard</option>
+                        <option value="Emergency">Emergency</option>
+                        <option value="Call-Off">Call-Off</option>
+                    </select>
                 </div>
 
                 <button type="submit" class="btn btn-submit">+ Post Shift to Live Board</button>
@@ -185,24 +178,18 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
-        // Auto-Calculate Total Hours (handles overnight math)
-        function calculateHours() {
-            const start = document.getElementById('startTime').value;
-            const end = document.getElementById('endTime').value;
-            
-            if (!start || !end) return;
-
+        // Helper to compute total hours (including overnight)
+        function computeHours(start, end) {
             const [startH, startM] = start.split(':').map(Number);
             const [endH, endM] = end.split(':').map(Number);
 
             let diffMinutes = (endH * 60 + endM) - (startH * 60 + startM);
             if (diffMinutes <= 0) {
-                // Overnight shift calculation
                 diffMinutes += 24 * 60;
             }
 
             const totalHours = diffMinutes / 60;
-            document.getElementById('hours').value = `${totalHours} Hours`;
+            return `${totalHours} Hours`;
         }
 
         // 1. Bulk Import Function
@@ -254,6 +241,7 @@
             const startTime = document.getElementById('startTime').value;
             const endTime = document.getElementById('endTime').value;
             const timeDisplay = `${startTime} - ${endTime}`;
+            const hoursDisplay = computeHours(startTime, endTime);
 
             // Create ISO string for chronological feed sorting
             const startIso = new Date(`${day} ${months[dateObj.getMonth()]} ${year} ${startTime}`).toISOString();
@@ -262,7 +250,7 @@
                 site: document.getElementById('site').value,
                 dateDisplay: dateDisplay,
                 timeDisplay: timeDisplay,
-                hours: document.getElementById('hours').value,
+                hours: hoursDisplay,
                 urgency: document.getElementById('urgency').value,
                 startIso: startIso,
                 createdAt: firebase.firestore.FieldValue.serverTimestamp()
@@ -271,7 +259,6 @@
             await db.collection("shifts").add(shiftData);
             alert("Shift successfully posted to the live board!");
             document.getElementById('add-shift-form').reset();
-            document.getElementById('hours').value = '';
         }
 
         // 3. Live Shifts Listener
